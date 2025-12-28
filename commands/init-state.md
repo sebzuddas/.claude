@@ -1,57 +1,84 @@
-Create project state file for: $ARGUMENTS
+Initialize project documentation structure for: $ARGUMENTS
 
 ## Instructions
 
-1. Create `docs/` directory if it doesn't exist:
+1. Create directory structure:
 ```bash
-   mkdir -p docs
+   mkdir -p docs/plans
 ```
 
-2. Create `docs/STATE.md` with this structure:
+2. Create `docs/STATE.md`:
 ```markdown
-# State
+   # State
 
-**Updated:** [today's date]
-**Focus:** $ARGUMENTS
+   **Updated:** [today's date]
+   **Focus:** $ARGUMENTS
 
-## Status
-- [ ] [First task to define]
+   ## Status
+   - [ ] Define initial tasks
 
-## Blockers
-None
+   ## Blockers
+   None
 
-## Recent
-[No history yet]
+   ## Recent
+   [New project]
 
-## Next
-[To be defined]
+   ## Next
+   [Define scope and first steps]
 
-## Questions
-→ docs/OPEN_QUESTIONS.md
+   ## Questions
+   → docs/OPEN_QUESTIONS.md
 ```
 
-3. Create `docs/DECISIONS.md` if it doesn't exist:
+3. Create `docs/BACKLOG.md`:
 ```markdown
-# Decisions
+   # Backlog
 
-[Append new decisions at top]
+   ## Overview
+   $ARGUMENTS
 
----
+   ---
+
+   ## Features
+
+   ### [Feature 1]
+   **Status:** 🔲 Not Started
+
+   **Description:**
+   [To be defined]
+
+   **Requirements:**
+   - [ ] [Requirement]
+
+   **Acceptance Criteria:**
+   - [Criterion]
+
+   ---
 ```
 
-4. Create `docs/OPEN_QUESTIONS.md` if it doesn't exist:
+4. Create `docs/DECISIONS.md`:
 ```markdown
-# Open Questions
+   # Decisions
 
-[Format: - [ ] Question — context]
+   [Append new decisions at top]
 
----
+   ---
 ```
 
-5. Confirm what was created.
+5. Create `docs/OPEN_QUESTIONS.md`:
+```markdown
+   # Open Questions
 
-If $ARGUMENTS is empty, use "New project" as the focus and note that it should be updated.
+   - [ ] [Question] — [context]
+
+   ---
 ```
+
+6. Report what was created.
+
+
+If $ARGUMENTS is empty, prompt: "What's the project focus?"
+
 
 ---
 

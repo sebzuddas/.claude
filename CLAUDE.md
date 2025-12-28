@@ -11,6 +11,7 @@ Before responding to any task, silently:
 - Read `docs/STATE.md` if it exists
 - Note current focus, blockers, and recent decisions
 - Orient response to current project state
+- Read `docs/BACKLOG.md` — scan for items marked (/) In Progress or referenced in STATE.md, containing the desired changes for this prompt. 
 
 Do NOT narrate this step. Just be informed by it.
 
@@ -44,6 +45,7 @@ After completing substantive work, silently update `docs/STATE.md`:
 
 For significant decisions, append to `docs/DECISIONS.md`.
 For new questions, append to `docs/OPEN_QUESTIONS.md`.
+For changes made from the backlog, update `docs/BACKLOG.md` with ticks next to completed features. 
 
 Do NOT narrate unless the update is significant enough to mention.
 
@@ -62,7 +64,8 @@ If `docs/STATE.md` doesn't exist when checking context, create minimal structure
 docs/
 ├── STATE.md
 ├── DECISIONS.md
-└── OPEN_QUESTIONS.md
+├── OPEN_QUESTIONS.md
+└── BACKLOG.md
 ```
 
 Use templates from @agent-projectManager if full initialization needed.

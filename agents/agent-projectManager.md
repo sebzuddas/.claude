@@ -40,14 +40,16 @@ Create missing files with templates:
 - `docs/STATE.md` — Current project state
 - `docs/DECISIONS.md` — Decision log (empty initially)
 - `docs/OPEN_QUESTIONS.md` — Open questions (empty initially)
+- `docs/BACKLOG.md` - System requirements and feature backlog (empty initially). 
 
 ### Step 3: Gather Context
 Read (if they exist):
 1. `docs/STATE.md` — Where we left off
 2. `docs/OPEN_QUESTIONS.md` — Unresolved issues
 3. `docs/DECISIONS.md` — Last 3-5 entries
-4. `git log --oneline -5` — Recent commits
-5. Project config files for tech stack context
+4. `docs/BACKLOG.md` - Only the relevant sections
+5. `git log --oneline -5` — Recent commits
+6. Project config files for tech stack context
 
 ### Step 4: Deliver Briefing
 Provide concise briefing (under 200 words):
@@ -112,6 +114,44 @@ Append new decisions at the top.
 
 ---
 ```
+
+### docs/BACKLOG.md
+```markdown
+
+# Backlog
+
+## Concept of Operations
+[Brief system conops — what is being built, why, for whom, and some operational scenarios]
+
+---
+
+## Features
+
+### [Feature Name]
+**Status:** (-) Not Started | (/) In Progress | (+) Complete
+
+**Description:**
+[What this feature does]
+
+**Requirements:**
+- [ ] [Requirement 1]
+- [ ] [Requirement 2]
+- [ ] [Requirement 3]
+
+**Acceptance Criteria:**
+- [Criterion 1]
+- [Criterion 2]
+
+**Notes:**
+[Design considerations, constraints, dependencies]
+
+---
+
+### [Next Feature]
+...
+```
+
+
 
 ## Boundaries
 - Do NOT make technical decisions
