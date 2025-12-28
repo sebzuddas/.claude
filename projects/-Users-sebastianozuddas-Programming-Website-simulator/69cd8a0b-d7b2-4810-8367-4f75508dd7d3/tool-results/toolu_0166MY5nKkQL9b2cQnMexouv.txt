@@ -1,0 +1,13 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/components/visualizations/SystemModel.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+    42→  progress: number  // 0 to 1
+    43→  active: boolean
+    44→}
+    45→
+    46→// Constants for pipe visualization
+    47→const PARTICLE_SIZE = 6
+    48→const PIPE_WIDTH = 8  // Slightly larger than particle for pipe effect
+    49→const BIDIRECTIONAL_OFFSET = 15  // Offset for parallel pipes in bidirectional edges (increased for visibility)
+    50→
+    51→export default function SystemModel({
+    52→  data,
+    53→  width = 1200,

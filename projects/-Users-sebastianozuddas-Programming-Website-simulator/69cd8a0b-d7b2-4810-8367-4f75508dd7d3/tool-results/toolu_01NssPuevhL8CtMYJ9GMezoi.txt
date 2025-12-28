@@ -1,0 +1,31 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/components/visualizations/SystemModel.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   275→              const isPositive = weight >= 0
+   276→              p.stroke(isPositive ? [50, 150, 50, 50] : [150, 50, 50, 50]) // Red/Green/Blue/Alpha 
+   277→              p.strokeWeight(PIPE_WIDTH) // Pipe-like width
+   278→
+   279→              // Draw arrow (parallel pipe if bidirectional, straight otherwise)
+   280→              drawArrow(p, from, to, isPositive, bidirectional, parallelOffset)
+   281→
+   282→              // Calculate label position
+   283→              let midX, midY
+   284→              if (bidirectional) {
+   285→                // For parallel pipes, offset the label position using canonical direction
+   286→                const useReverse = from.id > to.id
+   287→                const refX1 = useReverse ? to.x : from.x
+   288→                const refY1 = useReverse ? to.y : from.y
+   289→                const refX2 = useReverse ? from.x : to.x
+   290→                const refY2 = useReverse ? from.y : to.y
+   291→
+   292→                const offset = getParallelOffset(refX1, refY1, refX2, refY2, Math.abs(parallelOffset))
+   293→                const sign = parallelOffset > 0 ? 1 : -1
+   294→
+   295→                midX = (from.x + to.x) / 2 + offset.x * sign
+   296→                midY = (from.y + to.y) / 2 + offset.y * sign
+   297→              } else {
+   298→                midX = (from.x + to.x) / 2
+   299→                midY = (from.y + to.y) / 2
+   300→              }
+   301→
+   302→              // Draw +/- sign in the middle
+   303→              p.fill(isPositive ? [50, 150, 50] : [150, 50, 50])
+   304→              p.noStroke()

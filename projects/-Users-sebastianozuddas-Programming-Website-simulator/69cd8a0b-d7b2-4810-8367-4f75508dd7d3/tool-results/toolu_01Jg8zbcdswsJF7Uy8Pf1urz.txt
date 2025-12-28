@@ -1,0 +1,81 @@
+5-export interface RecordingOptions {
+6-  duration?: number // seconds
+7-  fps?: number
+8-  onProgress?: (progress: number) => void
+9-  onComplete?: () => void
+10-}
+11-
+12-/**
+13- * Record canvas as GIF
+14- * Uses canvas frame capture and client-side GIF encoding
+15- */
+16-export async function recordCanvasAsGif(
+17-  canvas: HTMLCanvasElement,
+18-  filename: string,
+19-  options: RecordingOptions = {}
+20-): Promise<void> {
+21-  const {
+22-    duration = 5,
+23-    fps = 10,
+24-    onProgress,
+25-    onComplete
+26-  } = options
+27-
+28-  return new Promise(async (resolve, reject) => {
+29-    try {
+30-      / TODO: Fix gif.js dependency issue
+31-      reject(new Error('GIF export temporarily disabled - gif.js dependency needs to be installed'))
+32-      return
+33-
+34-      // Dynamically import gif.js
+35-      // const GIF = (await import('gif.js')).default
+36-
+37-      // const gif = new GIF({
+38-      /   workers: 2,
+39-      /   quality: 10,
+40-      /   width: canvas.width,
+41-      /   height: canvas.height,
+42-      /   workerScript: '/gif.worker.js' // Will need to be added to public folder
+43-      // })
+44-
+45:      const totalFrames = duration * fps
+46-      const frameDelay = 1000 / fps
+47-      let capturedFrames = 0
+48-
+49-      const captureFrame = () => {
+50-        if (capturedFrames >= totalFrames) {
+51-          // Finish recording
+52-          gif.render()
+53-          return
+54-        }
+55-
+56-        // Add current canvas frame
+57-        gif.addFrame(canvas, { copy: true, delay: frameDelay })
+58-        capturedFrames++
+59-
+60-        // Update progress
+61-        const progress = Math.round((capturedFrames / totalFrames) * 100)
+62-        onProgress?.(progress)
+63-
+64-        // Capture next frame
+65-        setTimeout(captureFrame, frameDelay)
+66-      }
+67-
+68-      gif.on('finished', (blob: Blob) => {
+69-        // Download the GIF
+70-        const url = URL.createObjectURL(blob)
+71-        const a = document.createElement('a')
+72-        a.href = url
+73-        a.download = filename
+74-        a.click()
+75-        URL.revokeObjectURL(url)
+76-
+77-        onComplete?.()
+78-        resolve()
+79-      })
+80-
+81-      gif.on('error', (error: Error) => {
+82-        console.error('GIF creation error:', error)
+83-        reject(error)
+84-      })
+85-

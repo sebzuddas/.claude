@@ -1,0 +1,18 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/components/visualizations/SystemModel.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   411→                x2 += offset.x * sign
+   412→                y2 += offset.y * sign
+   413→              }
+   414→
+   415→              // Interpolate along the (possibly offset) line
+   416→              const x = p.lerp(x1, x2, progress)
+   417→              const y = p.lerp(y1, y2, progress)
+   418→
+   419→              // Particle color based on current flow direction
+   420→              const isPositive = edge.flowRate >= 0
+   421→              p.fill(isPositive ? [50, 200, 50, 220] : [200, 50, 50, 220])
+   422→              p.noStroke()
+   423→              p.circle(x, y, PARTICLE_SIZE)
+   424→            })
+   425→          }
+   426→
+   427→          function drawNodes(p: any, nodes: Node[]) {

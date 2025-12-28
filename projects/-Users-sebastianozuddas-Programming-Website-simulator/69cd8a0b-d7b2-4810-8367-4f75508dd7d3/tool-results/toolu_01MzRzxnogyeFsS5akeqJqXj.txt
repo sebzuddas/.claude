@@ -1,0 +1,38 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/components/visualizations/SystemModel.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   131→          let particles: Particle[] = []
+   132→          const particlePool: Particle[] = []
+   133→          let lastParticleSpawn = 0
+   134→
+   135→          p.setup = () => {
+   136→            const canvas = p.createCanvas(width, height - 100) // Reserve space for controls
+   137→            canvas.parent(canvasRef.current)
+   138→            canvas.style('display', 'block')
+   139→            canvas.style('margin', '0 auto')
+   140→
+   141→            p.textAlign(p.CENTER, p.CENTER)
+   142→
+   143→            // Initialize layout
+   144→            if (simulationRef.current && data) {
+   145→              const layout = createNeuralNetworkLayout(data, simulationRef.current, width, height - 100)
+   146→              nodes = layout.nodes
+   147→              edges = layout.edges
+   148→
+   149→              // Initialize fixed particles per edge (conservation of particles)
+   150→              const particlesPerEdge = 6
+   151→              edges.forEach(edge => {
+   152→                for (let i = 0; i < particlesPerEdge; i++) {
+   153→                  particlePool.push({
+   154→                    edge: edge,
+   155→                    progress: i / particlesPerEdge, // Evenly distributed
+   156→                    active: true // Always active (conserved)
+   157→                  })
+   158→                }
+   159→              })
+   160→            }
+   161→
+   162→            p.frameRate(30)
+   163→          }
+   164→
+   165→          p.draw = () => {
+   166→            p.background(250)
+   167→

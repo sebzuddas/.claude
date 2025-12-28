@@ -1,0 +1,36 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/app/abm/page.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   529→          </button>
+   530→        </div>
+   531→      </div>
+   532→
+   533→      {/* Entity Inspector (floating panel when entity selected) */}
+   534→      {inspectedEntity && (
+   535→        <div className="w-full max-w-6xl bg-white rounded-lg shadow-lg p-4 mt-4">
+   536→          <div className="flex justify-between items-start mb-2">
+   537→            <h3 className="font-semibold">Agent Inspector</h3>
+   538→            <button
+   539→              onClick={() => {
+   540→                setInspectedEntity(null)
+   541→                rendererRef.current?.setTrackedEntity(null)
+   542→              }}
+   543→              className="text-gray-400 hover:text-gray-600"
+   544→            >
+   545→              ✕
+   546→            </button>
+   547→          </div>
+   548→          <div className="text-sm flex gap-4 items-center overflow-x-auto pb-2">
+   549→            <div className="bg-gray-50 px-3 py-1 rounded whitespace-nowrap"><strong>ID:</strong> {inspectedEntity.id}</div>
+   550→            <div className="bg-gray-50 px-3 py-1 rounded whitespace-nowrap"><strong>Type:</strong> {inspectedEntity.archetype}</div>
+   551→            {Object.entries(inspectedEntity.components).map(([type, data]) => (
+   552→              <div key={type} className="bg-gray-50 px-3 py-1 rounded whitespace-nowrap">
+   553→                <span className="font-medium text-blue-600">{type}:</span>{' '}
+   554→                <span className="text-xs font-mono">{JSON.stringify(data)}</span>
+   555→              </div>
+   556→            ))}
+   557→          </div>
+   558→        </div>
+   559→      )}
+   560→
+   561→      {/* Model Info */}
+   562→      {model && (
+   563→        <div className="w-full max-w-6xl bg-white rounded-lg shadow-lg p-4 mt-4">

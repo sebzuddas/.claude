@@ -1,0 +1,175 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import VisualizationLayout from '@/components/ui/VisualizationLayout'
+import Flocking from '@/components/visualizations/Flocking'
+import FileUploadZone from '@/components/ui/FileUploadZone'
+import MessageDisplay from '@/components/ui/MessageDisplay'
+import CodeBlock from '@/components/ui/CodeBlock'
+import { DataParser } from '@/lib/utils'
+import type { FlockingData, FileUploadResult } from '@/types'
+
+export default function FlockingPage() {
+  const [config, setConfig] = useState<FlockingData | null>(null)
+  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' }>()
+
+  useEffect(() => {
+    // Initialize with data from URL or demo config
+    const urlData = DataParser.parseURLParams()
+
+    if (urlData.error) {
+      setMessage({ text: urlData.error, type: 'error' })
+      return
+    }
+
+    if (urlData.demo || (!urlData.data)) {
+      generateDemoConfig()
+      setMessage({ text: 'Demo flocking simulation loaded. Upload your own JSON config or use URL parameters.', type: 'success' })
+    } else {
+      setFlockingConfig(urlData.data)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const generateDemoConfig = () => {
+    const demoConfig: FlockingData = {
+      modelType: 'flocking',
+      parameters: {
+        boidCount: 100,
+        perceptionRadius: 50,
+        separationDistance: 25,
+        separationForce: 1.5,
+        alignmentForce: 1.0,
+        cohesionForce: 1.0,
+        maxSpeed: 4,
+        maxForce: 0.2
+      },
+      title: 'Demo Flocking Behavior'
+    }
+
+    setConfig(demoConfig)
+  }
+
+  const setFlockingConfig = (newConfig: any) => {
+    // Validate configuration
+    if (!newConfig?.modelType || newConfig.modelType !== 'flocking') {
+      setMessage({ text: 'Invalid config: modelType must be "flocking"', type: 'error' })
+      return
+    }
+
+    if (!newConfig?.parameters) {
+      setMessage({ text: 'Invalid config: missing required "parameters" field', type: 'error' })
+      return
+    }
+
+    setConfig(newConfig)
+    setMessage({ text: 'Flocking configuration loaded successfully!', type: 'success' })
+  }
+
+  const handleFileUpload = (result: FileUploadResult) => {
+    if (result.error) {
+      setMessage({ text: result.error, type: 'error' })
+    } else if (result.data) {
+      setFlockingConfig(result.data)
+    }
+  }
+
+  const handleExport = () => {
+    setMessage({ text: 'Export functionality coming soon!', type: 'info' })
+  }
+
+  return (
+    <VisualizationLayout
+      title="Flocking Behavior Simulation"
+      description="Emergent group behavior from simple rules: separation, alignment, and cohesion"
+    >
+      {/* File Upload */}
+      <FileUploadZone
+        onFileUpload={handleFileUpload}
+        description="Drop a JSON config file here or click to select"
+        className="w-full max-w-2xl"
+      />
+
+      {/* Message Display */}
+      {message && (
+        <MessageDisplay
+          message={message.text}
+          type={message.type}
+          onClose={() => setMessage(undefined)}
+        />
+      )}
+
+      {/* Visualization */}
+      {config && (
+        <div className="w-full">
+          <Flocking
+            config={config}
+            onError={(error) => setMessage({ text: error, type: 'error' })}
+          />
+        </div>
+      )}
+
+      {/* Usage Instructions */}
+      <div className="mt-8 max-w-4xl">
+        <h3 className="text-lg font-semibold mb-4">Expected JSON Format:</h3>
+        <CodeBlock
+          code={{
+            "modelType": "flocking",
+            "parameters": {
+              "boidCount": 100,
+              "perceptionRadius": 50,
+              "separationDistance": 25,
+              "separationForce": 1.5,
+              "alignmentForce": 1.0,
+              "cohesionForce": 1.0,
+              "maxSpeed": 4,
+              "maxForce": 0.2
+            },
+            "title": "My Flocking Simulation"
+          }}
+        />
+
+        <div className="mt-6">
+          <h4 className="text-md font-semibold mb-2">Parameter Descriptions:</h4>
+          <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
+            <li><strong>boidCount</strong> (10-300): Number of boids in the flock</li>
+            <li><strong>perceptionRadius</strong> (20-150px): How far each boid can see</li>
+            <li><strong>separationDistance</strong> (10-50px): Personal space distance</li>
+            <li><strong>separationForce</strong> (0-3): Weight of avoiding crowding</li>
+            <li><strong>alignmentForce</strong> (0-3): Weight of matching neighbor velocity</li>
+            <li><strong>cohesionForce</strong> (0-3): Weight of moving toward flock center</li>
+            <li><strong>maxSpeed</strong> (1-10): Maximum velocity of boids</li>
+            <li><strong>maxForce</strong> (0.05-0.5): Maximum steering force (turning ability)</li>
+          </ul>
+        </div>
+
+        <div className="mt-6">
+          <h4 className="text-md font-semibold mb-2">Flocking Algorithm:</h4>
+          <p className="text-sm text-gray-700 mb-2">
+            The flocking behavior emerges from three simple rules applied to each boid:
+          </p>
+          <ol className="list-decimal list-inside text-sm text-gray-700 space-y-2 ml-4">
+            <li>
+              <strong>Separation:</strong> Steer to avoid crowding local flockmates. Each boid
+              maintains personal space by moving away from neighbors that are too close.
+            </li>
+            <li>
+              <strong>Alignment:</strong> Steer towards the average heading of local flockmates.
+              Boids try to match the velocity of their neighbors, creating coordinated movement.
+            </li>
+            <li>
+              <strong>Cohesion:</strong> Steer to move toward the average position (center of mass)
+              of local flockmates. This keeps the flock together.
+            </li>
+          </ol>
+          <p className="text-sm text-gray-700 mt-3">
+            These three forces are calculated for each boid based on its nearby neighbors (within
+            perception radius), weighted by the force parameters, and combined to produce the
+            final steering direction. The result is complex, lifelike group behavior from simple
+            local rules.
+          </p>
+        </div>
+      </div>
+    </VisualizationLayout>
+  )
+}

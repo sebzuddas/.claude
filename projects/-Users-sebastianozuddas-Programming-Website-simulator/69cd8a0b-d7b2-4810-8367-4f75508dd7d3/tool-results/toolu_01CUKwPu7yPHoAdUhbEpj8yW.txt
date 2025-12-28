@@ -1,0 +1,41 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/app/vectorfield/page.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   171→    <VisualizationLayout
+   172→      title="Vector Field Visualization"
+   173→      description="Visualize 2D and 3D vector fields from linear and nonlinear dynamical systems"
+   174→    >
+   175→      {/* Controls */}
+   176→      <div className="controls mb-4">
+   177→        <div className="flex flex-wrap gap-2 items-center">
+   178→          <button
+   179→            onClick={loadMassSpringDamperDemo}
+   180→            className="btn"
+   181→          >
+   182→            Mass-Spring-Damper (2D)
+   183→          </button>
+   184→          <button
+   185→            onClick={loadLorenzAttractorDemo}
+   186→            className="btn"
+   187→          >
+   188→            Lorenz Attractor (3D)
+   189→          </button>
+   190→          <div className="flex-grow" />
+   191→          <button
+   192→            onClick={() => router.push('/systemmodel')}
+   193→            className="px-3 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded hover:from-green-600 hover:to-emerald-600 transition-colors text-sm font-semibold shadow-md"
+   194→            title="Go to System Model Simulator"
+   195→          >
+   196→            🔧 System Simulator
+   197→          </button>
+   198→          <button
+   199→            onClick={() => router.push('/statespace')}
+   200→            className="px-3 py-2 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded hover:from-pink-600 hover:to-purple-600 transition-colors text-sm font-semibold shadow-md"
+   201→            title="Go to State Space Visualizer"
+   202→          >
+   203→            🎨 Phase Portrait
+   204→          </button>
+   205→        </div>
+   206→      </div>
+   207→
+   208→      {/* File Upload */}
+   209→      <FileUploadZone
+   210→        onFileUpload={handleFileUpload}

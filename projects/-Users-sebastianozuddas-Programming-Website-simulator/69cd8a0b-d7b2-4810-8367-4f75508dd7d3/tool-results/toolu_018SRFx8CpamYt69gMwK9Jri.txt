@@ -1,0 +1,41 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/app/statespace/page.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+    12→export default function StateSpacePage() {
+    13→  const [data, setData] = useState<StateSpaceData | null>(null)
+    14→  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' }>()
+    15→
+    16→  useEffect(() => {
+    17→    // Check sessionStorage first (from System Simulator)
+    18→    const sessionData = sessionStorage.getItem('stateSpaceData')
+    19→    if (sessionData) {
+    20→      try {
+    21→        const parsedData = JSON.parse(sessionData)
+    22→        setStateSpaceData(parsedData)
+    23→        setMessage({ text: 'Loaded simulation data from System Simulator!', type: 'success' })
+    24→        sessionStorage.removeItem('stateSpaceData') // Clear after loading
+    25→        return
+    26→      } catch (error) {
+    27→        console.error('Failed to parse session data:', error)
+    28→        sessionStorage.removeItem('stateSpaceData')
+    29→      }
+    30→    }
+    31→
+    32→    // Initialize with data from URL or demo data
+    33→    const urlData = DataParser.parseURLParams()
+    34→
+    35→    if (urlData.error) {
+    36→      setMessage({ text: urlData.error, type: 'error' })
+    37→      return
+    38→    }
+    39→
+    40→    if (urlData.demo || !urlData.data) {
+    41→      generateDemoData()
+    42→      setMessage({ text: 'Demo data loaded: Damped Oscillator. Upload your own JSON file.', type: 'success' })
+    43→    } else {
+    44→      setStateSpaceData(urlData.data)
+    45→    }
+    46→    // eslint-disable-next-line react-hooks/exhaustive-deps
+    47→  }, [])
+    48→
+    49→  const generateDemoData = () => {
+    50→    // Generate a damped oscillator trajectory
+    51→    const dt = 0.05

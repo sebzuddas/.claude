@@ -1,0 +1,74 @@
+   530→        </div>
+   531→      </div>
+   532→
+   533→      {/* Entity Inspector (floating panel when entity selected) */}
+   534→      {inspectedEntity && (
+   535→        <div className="w-full max-w-4xl bg-white rounded-lg shadow-lg p-4 mt-4">
+   536→          <div className="flex justify-between items-start">
+   537→            <h3 className="font-semibold mb-2">Agent Inspector</h3>
+   538→            <button
+   539→              onClick={() => {
+   540→                setInspectedEntity(null)
+   541→                rendererRef.current?.setTrackedEntity(null)
+   542→              }}
+   543→              className="text-gray-400 hover:text-gray-600"
+   544→            >
+   545→              ✕
+   546→            </button>
+   547→          </div>
+   548→          <div className="text-sm grid grid-cols-2 md:grid-cols-4 gap-4">
+   549→            <div><strong>ID:</strong> {inspectedEntity.id}</div>
+   550→            <div><strong>Type:</strong> {inspectedEntity.archetype}</div>
+   551→            {Object.entries(inspectedEntity.components).map(([type, data]) => (
+   552→              <div key={type} className="col-span-2 md:col-span-1">
+   553→                <div className="font-medium text-blue-600">{type}</div>
+   554→                <pre className="text-xs bg-gray-100 p-2 rounded overflow-auto max-h-24">
+   555→                  {JSON.stringify(data, null, 2)}
+   556→                </pre>
+   557→              </div>
+   558→            ))}
+   559→          </div>
+   560→        </div>
+   561→      )}
+   562→
+   563→      {/* Model Info */}
+   564→      {model && (
+   565→        <div className="w-full max-w-4xl bg-white rounded-lg shadow-lg p-4 mt-4">
+   566→          <h3 className="font-semibold mb-2">Model Info</h3>
+   567→          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+   568→            <div className="md:col-span-2">
+   569→              <p className="text-gray-600">{model.overview.purpose}</p>
+   570→            </div>
+   571→            <div className="flex gap-4">
+   572→              <div><strong>Agents:</strong> {controllerRef.current?.getEntities().length || 0}</div>
+   573→              <div><strong>dt:</strong> {model.overview.scales.temporal.dt}</div>
+   574→            </div>
+   575→          </div>
+   576→        </div>
+   577→      )}
+   578→
+   579→      {/* Timeseries Plots - Two vertical graphs */}
+   580→      <div className="w-full max-w-4xl mt-8 grid grid-cols-1 gap-4">
+   581→        {/* Aggregate/Population-level Plot */}
+   582→        <div className="bg-white rounded-lg shadow-lg p-4">
+   583→          <h3 className="font-semibold mb-2">Population Dynamics (Aggregate)</h3>
+   584→          <p className="text-xs text-gray-500 mb-2">Shows total counts and population-level metrics over time</p>
+   585→          <div className="h-48 relative">
+   586→            {timeseries.size > 0 ? (
+   587→              <TimeseriesPlot data={timeseries} type="aggregate" />
+   588→            ) : (
+   589→              <div className="h-full flex items-center justify-center text-gray-400">
+   590→                Run simulation to see population data
+   591→              </div>
+   592→            )}
+   593→          </div>
+   594→        </div>
+   595→
+   596→        {/* Individual Agent-level Plot */}
+   597→        <div className="bg-white rounded-lg shadow-lg p-4">
+   598→          <h3 className="font-semibold mb-2">Agent-Level Metrics (Individual)</h3>
+   599→          <p className="text-xs text-gray-500 mb-2">Shows average values and distributions across individual agents</p>
+
+<system-reminder>
+Whenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.
+</system-reminder>

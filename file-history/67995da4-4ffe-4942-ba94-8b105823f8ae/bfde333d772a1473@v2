@@ -1,0 +1,307 @@
+'use client'
+
+import { useEffect, useRef, useState } from 'react'
+import { ColorUtils, TypographyUtils } from '@/lib/utils'
+import type { HeatMapData, ColorTuple, VisualizationProps } from '@/types'
+
+interface HeatMapProps extends VisualizationProps {
+  data: HeatMapData
+  colorPalette?: string
+}
+
+export default function HeatMap({
+  data,
+  width = 900,
+  height = 600,
+  colorPalette = 'viridis',
+  onError
+}: HeatMapProps) {
+  const canvasRef = useRef<HTMLDivElement>(null)
+  const [p5Instance, setP5Instance] = useState<any>(null)
+  const paletteRef = useRef<ColorTuple[]>([]) // Use ref so P5 sketch sees updates
+
+  useEffect(() => {
+    let p5: any
+    let isMounted = true
+
+    const loadP5 = async () => {
+      if (typeof window !== 'undefined' && canvasRef.current) {
+        // Clear any existing canvases in the container first
+        if (canvasRef.current) {
+          canvasRef.current.innerHTML = ''
+        }
+
+        const p5Module = await import('p5')
+        const P5 = p5Module.default
+
+        // Check if component is still mounted
+        if (!isMounted) return
+
+        // Load theme configuration (title not used - handled by React component)
+        let labelSize = 12
+        let valueSize = 10
+
+        try {
+          const [loadedLabelSize, loadedValueSize] = await Promise.all([
+            TypographyUtils.getVisualizationFontSize('heatmap', 'labelSize'),
+            TypographyUtils.getVisualizationFontSize('heatmap', 'fontSize')
+          ])
+
+          if (!isMounted) return
+
+          labelSize = loadedLabelSize
+          valueSize = loadedValueSize
+        } catch (error) {
+          console.warn('Could not load font sizes, using defaults')
+        }
+
+        // Load color palette
+        try {
+          const paletteData = await ColorUtils.getColorPalette(colorPalette, 256)
+          // console.log('Loaded color palette:', colorPalette, 'with', paletteData.length, 'colors')
+          if (!isMounted) return
+          paletteRef.current = paletteData
+        } catch (error) {
+          console.warn('Could not load color palette, using default')
+          // Fallback to basic viridis colors
+          const fallbackPalette: ColorTuple[] = [
+            [68, 1, 84], [72, 40, 120], [62, 74, 137], [49, 104, 142],
+            [38, 130, 142], [31, 158, 137], [53, 183, 121], [109, 205, 89],
+            [180, 222, 44], [253, 231, 37]
+          ]
+          if (!isMounted) return
+          paletteRef.current = fallbackPalette
+          onError?.('Could not load color palette, using fallback')
+        }
+
+        if (!isMounted) return
+
+        const sketch = (p: any) => {
+          let cellWidth: number, cellHeight: number
+          let dataMin: number, dataMax: number
+
+          p.setup = () => {
+            const canvas = p.createCanvas(width, height)
+            canvas.parent(canvasRef.current)
+            canvas.style('display', 'block')
+            canvas.style('margin', '0 auto')
+
+            p.textAlign(p.CENTER, p.CENTER)
+            calculateLayout()
+            p.noLoop() // Stop continuous redrawing - heatmaps are static
+          }
+
+          p.draw = () => {
+            p.background(250)
+
+            if (!data?.data || !Array.isArray(data.data)) {
+              drawNoDataMessage()
+              return
+            }
+
+            drawHeatMap()
+            drawLabels()
+            // Remove duplicate title - handled by React component
+            drawLegend()
+          }
+
+          const calculateLayout = () => {
+            if (!data?.data?.[0]) return
+
+            // Calculate min/max only once when data changes (not every frame!)
+            const flatData = data.data.flat()
+            dataMin = Math.min(...flatData)
+            dataMax = Math.max(...flatData)
+            
+            const marginLeft = 80
+            const marginRight = 120 // Increased for legend space
+            const marginTop = 40  // Reduced since no P5 title
+            const marginBottom = 80
+            
+            const availableWidth = width - marginLeft - marginRight
+            const availableHeight = height - marginTop - marginBottom
+            
+            cellWidth = availableWidth / data.data[0].length
+            cellHeight = availableHeight / data.data.length
+          }
+          
+          const drawHeatMap = () => {
+            if (!data?.data || paletteRef.current.length === 0) return
+
+            const marginLeft = 80
+            const marginTop = 40
+
+            p.noStroke()
+
+            for (let i = 0; i < data.data.length; i++) {
+              for (let j = 0; j < data.data[i].length; j++) {
+                const value = data.data[i][j]
+                const colorIndex = Math.floor(p.map(value, dataMin, dataMax, 0, paletteRef.current.length - 1))
+                const [r, g, b] = paletteRef.current[colorIndex] || [128, 128, 128]
+                
+                p.fill(r, g, b)
+                
+                const x = marginLeft + j * cellWidth
+                const y = marginTop + i * cellHeight
+                
+                p.rect(x, y, cellWidth, cellHeight)
+                
+                // Add value text if cells are large enough
+                if (cellWidth > 40 && cellHeight > 20) {
+                  p.fill(value > (dataMin + dataMax) / 2 ? 255 : 0)
+                  p.textAlign(p.CENTER, p.CENTER)
+                  p.textSize(Math.min(cellWidth * 0.2, cellHeight * 0.3, valueSize))
+                  p.text(value.toFixed(1), x + cellWidth/2, y + cellHeight/2)
+                }
+              }
+            }
+          }
+          
+          const drawLabels = () => {
+            if (!data?.data) return
+
+            const marginLeft = 80
+            const marginTop = 40
+
+            p.fill(60)
+            p.textAlign(p.CENTER, p.CENTER)
+            p.textSize(labelSize)
+            
+            // X-axis labels
+            for (let j = 0; j < data.data[0].length; j++) {
+              const label = data.labels?.x?.[j] || `Col ${j + 1}`
+              const x = marginLeft + j * cellWidth + cellWidth/2
+              const y = marginTop + data.data.length * cellHeight + 20
+              
+              p.push()
+              p.translate(x, y)
+              p.rotate(-p.PI/6)
+              p.text(label, 0, 0)
+              p.pop()
+            }
+            
+            // Y-axis labels
+            p.textAlign(p.RIGHT, p.CENTER)
+            for (let i = 0; i < data.data.length; i++) {
+              const label = data.labels?.y?.[i] || `Row ${i + 1}`
+              const x = marginLeft - 10
+              const y = marginTop + i * cellHeight + cellHeight/2
+              p.text(label, x, y)
+            }
+          }
+          
+          const drawLegend = () => {
+            if (!data?.data || paletteRef.current.length === 0) return
+
+            const legendX = width - 100
+            const legendY = 60
+            const legendWidth = 20
+            const legendHeight = 200
+
+            // Draw color bar
+            p.noStroke()
+            for (let i = 0; i < legendHeight; i++) {
+              const t = i / (legendHeight - 1)
+              const colorIndex = Math.floor(t * (paletteRef.current.length - 1))
+              const [r, g, b] = paletteRef.current[colorIndex] || [128, 128, 128]
+              
+              p.fill(r, g, b)
+              p.rect(legendX, legendY + legendHeight - i, legendWidth, 1)
+            }
+            
+            // Draw legend border
+            p.stroke(100)
+            p.strokeWeight(1)
+            p.noFill()
+            p.rect(legendX, legendY, legendWidth, legendHeight)
+            
+            // Draw legend labels
+            p.fill(60)
+            p.noStroke()
+            p.textAlign(p.LEFT, p.CENTER)
+            p.textSize(Math.max(labelSize - 2, 8)) // Ensure readable size
+            
+            // Add legend title
+            p.textAlign(p.CENTER, p.CENTER)
+            p.text('Value', legendX + legendWidth/2, legendY - 15)
+            
+            p.textAlign(p.LEFT, p.CENTER)
+            p.text(dataMax.toFixed(1), legendX + legendWidth + 5, legendY)
+            p.text(((dataMax + dataMin) / 2).toFixed(1), legendX + legendWidth + 5, legendY + legendHeight/2)
+            p.text(dataMin.toFixed(1), legendX + legendWidth + 5, legendY + legendHeight)
+          }
+          
+          const drawNoDataMessage = () => {
+            p.fill(100)
+            p.textAlign(p.CENTER, p.CENTER)
+            p.textSize(16)
+            p.text('Load data via URL parameter, file upload, or use demo data', width/2, height/2)
+          }
+          
+          p.windowResized = () => {
+            // Handle responsive resize if needed
+            calculateLayout()
+            p.redraw() // Trigger single redraw
+          }
+
+          // Public method to trigger redraw when palette changes
+          p.updateDisplay = () => {
+            p.redraw()
+          }
+        }
+
+        if (!isMounted) return
+
+        p5 = new P5(sketch)
+
+        if (isMounted) {
+          setP5Instance(p5)
+        }
+      }
+    }
+
+    loadP5()
+
+    return () => {
+      isMounted = false
+      if (p5) {
+        p5.remove()
+      }
+      setP5Instance(null)
+      // Clear the container
+      if (canvasRef.current) {
+        canvasRef.current.innerHTML = ''
+      }
+    }
+    // Font sizes are loaded once and stored in state - no need to re-run effect when they change
+    // Remove colorPalette and palette from dependencies to avoid infinite loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, width, height, onError])
+
+  // Update palette when colorPalette changes
+  useEffect(() => {
+    const updatePalette = async () => {
+      try {
+        const paletteData = await ColorUtils.getColorPalette(colorPalette, 256)
+        paletteRef.current = paletteData
+        // Trigger redraw after palette update
+        if (p5Instance?.updateDisplay) {
+          p5Instance.updateDisplay()
+        }
+      } catch (error) {
+        console.warn('Could not update color palette')
+        onError?.('Could not update color palette')
+      }
+    }
+
+    if (p5Instance) {
+      updatePalette()
+    }
+  }, [colorPalette, p5Instance, onError])
+
+  return (
+    <div className="flex justify-center w-full">
+      <div ref={canvasRef} className="border border-gray-300 rounded-lg shadow-sm bg-white" />
+    </div>
+  )
+}

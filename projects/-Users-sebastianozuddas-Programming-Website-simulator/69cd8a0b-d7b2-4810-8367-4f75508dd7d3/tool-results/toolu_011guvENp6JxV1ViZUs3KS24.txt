@@ -1,0 +1,14 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/components/visualizations/SystemModel.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   730→      vy: 0
+   731→    })
+   732→  }
+   733→
+   734→  // Force constants
+   735→  const k_spring = 0.003  // Spring strength for connected nodes (reduced for looser connections)
+   736→  const k_repel = 5000    // Repulsion strength (increased for more spacing)
+   737→  const k_center = 0.005  // Centering force (reduced to allow more spread)
+   738→  const damping = 0.85    // Velocity damping
+   739→
+   740→  // Run simulation
+   741→  const iterations = 300
+   742→  for (let iter = 0; iter < iterations; iter++) {

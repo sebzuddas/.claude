@@ -1,0 +1,32 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/components/visualizations/SystemModel.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   311→              p.text(`w=${weight.toFixed(2)}`, midX, midY + 15)
+   312→            })
+   313→          }
+   314→
+   315→          function drawArrow(p: any, from: Node, to: Node, isPositive: boolean, isBidirectional: boolean, offsetAmount: number) {
+   316→            let x1 = from.x
+   317→            let y1 = from.y
+   318→            let x2 = to.x
+   319→            let y2 = to.y
+   320→
+   321→            // For bidirectional edges, draw parallel pipe offset from center
+   322→            if (isBidirectional) {
+   323→              const offset = getParallelOffset(x1, y1, x2, y2, offsetAmount)
+   324→
+   325→              // Debug logging
+   326→              if (from.id.includes('state') && to.id.includes('state')) {
+   327→                console.log(`Drawing ${from.id}->${to.id}: offset=(${offset.x.toFixed(1)}, ${offset.y.toFixed(1)}), offsetAmount=${offsetAmount}`)
+   328→              }
+   329→
+   330→              x1 += offset.x
+   331→              y1 += offset.y
+   332→              x2 += offset.x
+   333→              y2 += offset.y
+   334→            }
+   335→
+   336→            // Draw pipe (line)
+   337→            p.line(x1, y1, x2, y2)
+   338→
+   339→            // Draw arrowhead proportioned to pipe width
+   340→            const angle = p.atan2(y2 - y1, x2 - x1)
+   341→            const arrowSize = PIPE_WIDTH * 2.5 // Proportioned to pipe width

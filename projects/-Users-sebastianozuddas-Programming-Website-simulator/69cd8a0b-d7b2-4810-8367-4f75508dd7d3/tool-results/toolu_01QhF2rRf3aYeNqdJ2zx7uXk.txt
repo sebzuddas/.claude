@@ -1,0 +1,43 @@
+609-    } else {
+610-      setIsPlaying(!isPlaying)
+611-    }
+612-  }
+613-
+614-  const handleReset = () => {
+615-    setCurrentTimeIndex(0)
+616-    setIsPlaying(false)
+617-  }
+618-
+619:  const handleClearTrajectories = () => {
+620-    setTrajectories([])
+621-    setCurrentTimeIndex(0)
+622-    setIsPlaying(false)
+623-  }
+624-
+625-  const handleScrub = (e: React.ChangeEvent<HTMLInputElement>) => {
+626-    const value = parseInt(e.target.value)
+627-    setCurrentTimeIndex(value)
+628-  }
+629-
+--
+642-          <button
+643-            onClick={() => setShowArrows(!showArrows)}
+644-            className={`px-4 py-2 rounded transition-colors ${
+645-              showArrows ? 'bg-blue-500 text-white' : 'bg-gray-300'
+646-            }`}
+647-          >
+648-            {showArrows ? '✓ Arrows' : 'Arrows'}
+649-          </button>
+650-
+651-          <button
+652:            onClick={handleClearTrajectories}
+653-            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+654-            disabled={trajectories.length === 0}
+655-          >
+656-            Clear Trajectories ({trajectories.length}/2)
+657-          </button>
+658-        </div>
+659-
+660-        {/* Playback controls */}
+661-        {trajectories.length > 0 && (
+662-          <>

@@ -1,0 +1,56 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/app/abm/page.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+    61→  const animationFrameRef = useRef<number | null>(null)
+    62→  const lastTickTimeRef = useRef<number>(0)
+    63→
+    64→  // Demo models map
+    65→  const demoModels: Record<string, ABMModelDefinition> = {
+    66→    flocking: FLOCKING_MODEL,
+    67→    sir: SIR_MODEL,
+    68→    predatorPrey: PREDATOR_PREY_MODEL
+    69→  }
+    70→
+    71→  // =============================================================================
+    72→  // COMPUTED VALUES FOR GRAPH SELECTIONS
+    73→  // =============================================================================
+    74→
+    75→  // Get available aggregate metrics from model's observation config
+    76→  const availableAggregateMetrics = model?.designConcepts?.observation?.timeseries?.map(ts => ts.name) || []
+    77→
+    78→  // Get available archetypes from model
+    79→  const availableArchetypes = model?.overview?.entities?.archetypes?.map(a => a.name) || []
+    80→
+    81→  // Get agents of selected archetype
+    82→  const agentsOfArchetype = useCallback(() => {
+    83→    if (!controllerRef.current || !selectedArchetype) return []
+    84→    return controllerRef.current.getEntities()
+    85→      .filter(e => (e as any).archetype === selectedArchetype)
+    86→      .map(e => e.id)
+    87→  }, [selectedArchetype])
+    88→
+    89→  // Get available properties for the selected agent
+    90→  const availableAgentProperties = useCallback(() => {
+    91→    if (!controllerRef.current || !selectedAgentId) return []
+    92→    const entity = controllerRef.current.getEntity(selectedAgentId)
+    93→    if (!entity) return []
+    94→
+    95→    const properties: string[] = []
+    96→    const components = (entity as any).getAllComponents()
+    97→    for (const [componentType, data] of components) {
+    98→      if (typeof data === 'object' && data !== null) {
+    99→        for (const [key, value] of Object.entries(data)) {
+   100→          if (typeof value === 'number') {
+   101→            properties.push(`${componentType}.${key}`)
+   102→          }
+   103→        }
+   104→      }
+   105→    }
+   106→    return properties
+   107→  }, [selectedAgentId])
+   108→
+   109→  // =============================================================================
+   110→  // INITIALIZATION
+   111→  // =============================================================================
+   112→
+   113→  const initializeSimulation = useCallback(async (modelDef: ABMModelDefinition) => {
+   114→    if (!containerRef.current) return
+   115→

@@ -1,0 +1,59 @@
+130-    this.rng = createSeededRNG(this.state.seed)
+131-
+132-    // Create world with appropriate spatial index
+133-    this.environmentConfig = model.overview.scales.spatial
+134-    const spatialConfig = model.overview.scales.spatial.spatial
+135:    const boundary = model.overview.scales.spatial.boundary
+136-
+137-    let spatialIndex
+138-    if (spatialConfig.type === 'grid2D') {
+139-      spatialIndex = new Grid2DSpatialIndex(
+140-        spatialConfig.width,
+141-        spatialConfig.height,
+142-        spatialConfig.cellSize || 1,
+143:        boundary
+144-      )
+145-    } else {
+146-      spatialIndex = new SpatialHashGrid(
+147-        spatialConfig.width,
+148-        spatialConfig.height,
+149-        spatialConfig.cellSize || 50,
+150:        boundary
+151-      )
+152-    }
+153-
+154-    this.world = new World(spatialIndex)
+155-
+--
+347-    this.emit('reset')
+348-    this.emit('stateChanged', this.getState())
+349-  }
+350-
+351-  setSpeed(speed: number): void {
+352:    this.state.speed = MathPrimitives.clamp(speed, 0.1, 10)
+353-    this.emit('stateChanged', this.getState())
+354-  }
+355-
+356-  setSeed(seed: number): void {
+357-    this.state.seed = seed
+--
+480-      const velocity = entityObj.getComponent<Vector2D>('Velocity')
+481-
+482-      if (position && velocity) {
+483-        let newPos = VectorMath.add(position, VectorMath.mul(velocity, dt))
+484-
+485:        // Apply boundary conditions
+486-        const width = this.environmentConfig.spatial.width
+487-        const height = this.environmentConfig.spatial.height
+488-
+489:        if (this.environmentConfig.boundary === 'toroidal') {
+490-          newPos.x = ((newPos.x % width) + width) % width
+491-          newPos.y = ((newPos.y % height) + height) % height
+492:        } else if (this.environmentConfig.boundary === 'bounded') {
+493:          newPos.x = MathPrimitives.clamp(newPos.x, 0, width)
+494:          newPos.y = MathPrimitives.clamp(newPos.y, 0, height)
+495-        }
+496-
+497-        if (parallel) {
+498-          updates.push({ entity: entityObj, newPos })
+499-        } else {

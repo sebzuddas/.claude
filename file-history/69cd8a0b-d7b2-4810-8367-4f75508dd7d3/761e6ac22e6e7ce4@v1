@@ -1,0 +1,318 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import VisualizationLayout from '@/components/ui/VisualizationLayout'
+import VectorField from '@/components/visualizations/VectorField'
+import FileUploadZone from '@/components/ui/FileUploadZone'
+import MessageDisplay from '@/components/ui/MessageDisplay'
+import CodeBlock from '@/components/ui/CodeBlock'
+import { DataParser } from '@/lib/utils'
+import type { VectorFieldData, FileUploadResult } from '@/types'
+
+export default function VectorFieldPage() {
+  const [data, setData] = useState<VectorFieldData | null>(null)
+  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' }>()
+
+  useEffect(() => {
+    // Check sessionStorage first (from System Simulator)
+    const sessionData = sessionStorage.getItem('vectorFieldData')
+    if (sessionData) {
+      try {
+        const parsedData = JSON.parse(sessionData)
+        setVectorFieldData(parsedData)
+        setMessage({ text: 'Loaded system data from System Simulator!', type: 'success' })
+        sessionStorage.removeItem('vectorFieldData')
+        return
+      } catch (error) {
+        console.error('Failed to parse session data:', error)
+        sessionStorage.removeItem('vectorFieldData')
+      }
+    }
+
+    // Initialize with data from URL or demo data
+    const urlData = DataParser.parseURLParams()
+
+    if (urlData.error) {
+      setMessage({ text: urlData.error, type: 'error' })
+      return
+    }
+
+    if (urlData.demo || !urlData.data) {
+      loadMassSpringDamperDemo()
+      setMessage({ text: 'Demo data loaded: Mass-Spring-Damper System. Upload your own JSON file or try Lorenz attractor.', type: 'success' })
+    } else {
+      setVectorFieldData(urlData.data)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const loadMassSpringDamperDemo = () => {
+    // Mass-spring-damper system: d/dt [x, v] = [0, 1; -k/m, -c/m] [x, v]
+    // With m=1, k=4, c=0.5
+    const k = 4   // Spring stiffness
+    const m = 1   // Mass
+    const c = 0.5 // Damping coefficient
+
+    const demoData: VectorFieldData = {
+      A: [
+        [0, 1],
+        [-k / m, -c / m]
+      ],
+      labels: ['Position', 'Velocity'],
+      title: 'Mass-Spring-Damper System',
+      dimension: 2,
+      selectedStates: [0, 1],
+      bounds: {
+        min: [-3, -3],
+        max: [3, 3]
+      }
+    }
+
+    setData(demoData)
+  }
+
+  const loadLorenzAttractorDemo = () => {
+    // Lorenz attractor: nonlinear chaotic system
+    // dx/dt = σ(y - x)
+    // dy/dt = x(ρ - z) - y
+    // dz/dt = xy - βz
+    const sigma = 10
+    const rho = 28
+    const beta = 8 / 3
+
+    const demoData: VectorFieldData = {
+      f: (x: number[]) => {
+        const [x1, x2, x3] = x
+        return [
+          sigma * (x2 - x1),
+          x1 * (rho - x3) - x2,
+          x1 * x2 - beta * x3
+        ]
+      },
+      labels: ['x', 'y', 'z'],
+      title: 'Lorenz Attractor',
+      dimension: 3,
+      selectedStates: [0, 1, 2],
+      bounds: {
+        min: [-20, -30, 0],
+        max: [20, 30, 50]
+      }
+    }
+
+    setData(demoData)
+  }
+
+  const setVectorFieldData = (newData: any) => {
+    try {
+      // Validate basic structure
+      if (!newData.A && !newData.f) {
+        setMessage({
+          text: 'Invalid data: must provide either A matrix (linear) or f function (nonlinear)',
+          type: 'error'
+        })
+        return
+      }
+
+      if (newData.A) {
+        if (!Array.isArray(newData.A) || !Array.isArray(newData.A[0])) {
+          setMessage({ text: 'Invalid data: A must be a 2D array (matrix)', type: 'error' })
+          return
+        }
+
+        const n = newData.A.length
+        const m = newData.A[0].length
+
+        if (n !== m) {
+          setMessage({ text: 'Invalid data: A must be a square matrix', type: 'error' })
+          return
+        }
+      }
+
+      // Validate dimension
+      if (newData.dimension && newData.dimension !== 2 && newData.dimension !== 3) {
+        setMessage({ text: 'Invalid data: dimension must be 2 or 3', type: 'error' })
+        return
+      }
+
+      // Set defaults
+      const dimension = newData.dimension || (newData.A ? (newData.A.length <= 2 ? 2 : 3) : 3)
+      const numStates = newData.A ? newData.A.length : (newData.labels?.length || 3)
+      const selectedStates = newData.selectedStates || Array.from({ length: Math.min(dimension, numStates) }, (_, i) => i)
+
+      const vectorFieldData: VectorFieldData = {
+        A: newData.A,
+        f: newData.f,
+        labels: newData.labels || Array.from({ length: numStates }, (_, i) => `x${i + 1}`),
+        title: newData.title || 'Vector Field',
+        dimension,
+        selectedStates,
+        bounds: newData.bounds
+      }
+
+      setData(vectorFieldData)
+      setMessage({ text: 'Vector field data loaded successfully!', type: 'success' })
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Failed to parse data'
+      setMessage({ text: errorMsg, type: 'error' })
+    }
+  }
+
+  const handleFileUpload = (result: FileUploadResult) => {
+    if (result.error) {
+      setMessage({ text: result.error, type: 'error' })
+    } else if (result.data) {
+      setVectorFieldData(result.data)
+    }
+  }
+
+  return (
+    <VisualizationLayout
+      title="Vector Field Visualization"
+      description="Visualize 2D and 3D vector fields from linear and nonlinear dynamical systems"
+    >
+      {/* Controls */}
+      <div className="controls">
+        <button
+          onClick={loadMassSpringDamperDemo}
+          className="btn mr-2"
+        >
+          Mass-Spring-Damper (2D)
+        </button>
+        <button
+          onClick={loadLorenzAttractorDemo}
+          className="btn mr-2"
+        >
+          Lorenz Attractor (3D)
+        </button>
+      </div>
+
+      {/* File Upload */}
+      <FileUploadZone
+        onFileUpload={handleFileUpload}
+        description="Drop a JSON file with vector field data or System Simulator export"
+        className="w-full max-w-2xl"
+      />
+
+      {/* Message Display */}
+      {message && (
+        <MessageDisplay
+          message={message.text}
+          type={message.type}
+          onClose={() => setMessage(undefined)}
+        />
+      )}
+
+      {/* Visualization */}
+      {data && (
+        <div className="bg-white rounded-lg shadow-lg p-4">
+          <VectorField
+            data={data}
+            onError={(error) => setMessage({ text: error, type: 'error' })}
+          />
+        </div>
+      )}
+
+      {/* Usage Instructions */}
+      <div className="mt-8 max-w-4xl">
+        <h3 className="text-lg font-semibold mb-4">Accepted JSON Formats:</h3>
+
+        <div className="mb-6">
+          <h4 className="font-semibold mb-2">Format 1: Linear System (A matrix)</h4>
+          <p className="text-sm text-gray-600 mb-3">
+            For linear systems: dx/dt = Ax
+          </p>
+          <CodeBlock
+            code={{
+              "A": [
+                [0, 1],
+                [-4, -0.5]
+              ],
+              "labels": ["Position", "Velocity"],
+              "title": "Mass-Spring-Damper",
+              "dimension": 2,
+              "bounds": {
+                "min": [-3, -3],
+                "max": [3, 3]
+              }
+            }}
+          />
+        </div>
+
+        <div className="mb-6">
+          <h4 className="font-semibold mb-2">Format 2: Nonlinear System (function)</h4>
+          <p className="text-sm text-gray-600 mb-3">
+            For nonlinear systems, define the system dynamics in code (see Lorenz demo)
+          </p>
+          <CodeBlock
+            code={{
+              "note": "Nonlinear systems require code definition",
+              "example": "Lorenz attractor with f: (x) => [σ(y-x), x(ρ-z)-y, xy-βz]",
+              "labels": ["x", "y", "z"],
+              "title": "Lorenz Attractor",
+              "dimension": 3
+            }}
+          />
+        </div>
+
+        <div className="mb-6">
+          <h4 className="font-semibold mb-2">Format 3: System Simulator Export</h4>
+          <p className="text-sm text-gray-600 mb-3">
+            Complete export from the System Model simulator (click "View Vector Field")
+          </p>
+          <CodeBlock
+            code={{
+              "system": {
+                "A": "[[...]]",
+                "labels": {
+                  "states": ["x1", "x2"]
+                }
+              },
+              "metadata": {
+                "title": "System Name"
+              }
+            }}
+          />
+        </div>
+
+        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+          <h4 className="font-semibold mb-2">Features:</h4>
+          <ul className="list-disc list-inside text-sm space-y-1">
+            <li>2D and 3D vector field visualization with normalized arrows</li>
+            <li>Color coding by magnitude (blue = low, red = high)</li>
+            <li>Click anywhere to add trajectories (max 2 simultaneous)</li>
+            <li>RK4 integration for accurate trajectory computation</li>
+            <li>Interactive playback with timeline scrubber</li>
+            <li>Auto-calculated bounds based on system characteristics</li>
+            <li>Support for higher-dimensional systems (select which states to visualize)</li>
+            <li>Adjustable trail length to see recent trajectory history</li>
+          </ul>
+        </div>
+
+        <div className="mt-4 p-4 bg-amber-50 rounded-lg">
+          <h4 className="font-semibold mb-2">Workflow:</h4>
+          <ol className="list-decimal list-inside text-sm space-y-1">
+            <li>Try the demo systems (Mass-Spring-Damper or Lorenz Attractor)</li>
+            <li>Click on the vector field to add a trajectory from that initial condition</li>
+            <li>Use playback controls to animate the trajectory evolution</li>
+            <li>Upload your own system data as JSON</li>
+            <li>Or come from System Model page using "View Vector Field" button</li>
+          </ol>
+        </div>
+
+        <div className="mt-4 p-4 bg-green-50 rounded-lg">
+          <h4 className="font-semibold mb-2">Examples:</h4>
+          <div className="text-sm space-y-2">
+            <div>
+              <strong>Mass-Spring-Damper (2D):</strong>
+              <p className="text-gray-600">Classic oscillator showing spiral convergence to equilibrium</p>
+            </div>
+            <div>
+              <strong>Lorenz Attractor (3D):</strong>
+              <p className="text-gray-600">Famous chaotic system with butterfly-shaped strange attractor</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </VisualizationLayout>
+  )
+}

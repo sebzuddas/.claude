@@ -1,0 +1,111 @@
+     1→# Dependencies
+     2→/node_modules
+     3→/.pnp
+     4→.pnp.js
+     5→
+     6→# Production builds
+     7→/out
+     8→/.next/
+     9→/dist
+    10→
+    11→# Runtime data
+    12→pids
+    13→*.pid
+    14→*.seed
+    15→*.pid.lock
+    16→
+    17→# Coverage directory used by tools like istanbul
+    18→coverage/
+    19→*.lcov
+    20→
+    21→# nyc test coverage
+    22→.nyc_output
+    23→
+    24→# Dependency directories
+    25→jspm_packages/
+    26→
+    27→# TypeScript cache
+    28→*.tsbuildinfo
+    29→
+    30→# Optional npm cache directory
+    31→.npm
+    32→
+    33→# Optional eslint cache
+    34→.eslintcache
+    35→
+    36→# Microbundle cache
+    37→.rpt2_cache/
+    38→.rts2_cache_cjs/
+    39→.rts2_cache_es/
+    40→.rts2_cache_umd/
+    41→
+    42→# Optional REPL history
+    43→.node_repl_history
+    44→
+    45→# Output of 'npm pack'
+    46→*.tgz
+    47→
+    48→# Yarn Integrity file
+    49→.yarn-integrity
+    50→
+    51→# dotenv environment variables file
+    52→.env
+    53→.env.local
+    54→.env.development.local
+    55→.env.test.local
+    56→.env.production.local
+    57→
+    58→# parcel-bundler cache (https://parceljs.org/)
+    59→.cache
+    60→.parcel-cache
+    61→
+    62→# Next.js build output
+    63→.next
+    64→out
+    65→
+    66→# Nuxt.js build / generate output
+    67→.nuxt
+    68→dist
+    69→
+    70→# Gatsby files
+    71→.cache/
+    72→public
+    73→
+    74→# Storybook build outputs
+    75→.out
+    76→.storybook-out
+    77→
+    78→# Temporary folders
+    79→tmp/
+    80→temp/
+    81→
+    82→# Logs
+    83→logs
+    84→*.log
+    85→npm-debug.log*
+    86→yarn-debug.log*
+    87→yarn-error.log*
+    88→lerna-debug.log*
+    89→
+    90→# OS generated files
+    91→.DS_Store
+    92→.DS_Store?
+    93→._*
+    94→.Spotlight-V100
+    95→.Trashes
+    96→ehthumbs.db
+    97→Thumbs.db
+    98→
+    99→# IDE files
+   100→.vscode/
+   101→.idea/
+   102→*.swp
+   103→*.swo
+   104→*~
+   105→
+   106→# Backup files
+   107→# backup/
+
+<system-reminder>
+Whenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.
+</system-reminder>

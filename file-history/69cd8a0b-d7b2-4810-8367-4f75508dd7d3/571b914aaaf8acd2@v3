@@ -1,0 +1,274 @@
+/**
+ * SIR Epidemic Demo Model
+ *
+ * Susceptible-Infected-Recovered epidemic simulation.
+ * Demonstrates state machines and probabilistic interactions.
+ */
+
+import type { ABMModelDefinition } from '@/lib/abm'
+
+export const SIR_MODEL: ABMModelDefinition = {
+  schemaVersion: '1.0',
+
+  overview: {
+    purpose: 'SIR epidemic model showing disease spread through a population',
+
+    entities: {
+      componentTypes: [
+        {
+          name: 'Position',
+          properties: {
+            x: { type: 'number', default: 0 },
+            y: { type: 'number', default: 0 }
+          }
+        },
+        {
+          name: 'Velocity',
+          properties: {
+            x: { type: 'number', default: 0 },
+            y: { type: 'number', default: 0 }
+          }
+        },
+        {
+          name: 'Health',
+          properties: {
+            status: { type: 'enum', enumValues: ['S', 'I', 'R'], default: 'S' },
+            infectionTime: { type: 'number', default: 0 }
+          }
+        },
+        {
+          name: 'SteeringBehavior',
+          properties: {
+            rules: { type: 'string', default: '[]' },
+            maxSpeed: { type: 'number', default: 30 },
+            maxForce: { type: 'number', default: 2 }
+          }
+        }
+      ],
+
+      archetypes: [
+        {
+          name: 'Person',
+          components: {
+            Position: { x: 0, y: 0 },
+            Velocity: { x: 0, y: 0 },
+            Health: { status: 'S', infectionTime: 0 },
+            SteeringBehavior: {
+              rules: [
+                { type: 'wander', weight: 1.0, params: { wanderRadius: 20, wanderDistance: 40, wanderJitter: 0.3 } },
+                { type: 'separation', weight: 0.5, query: { radius: 15 } }
+              ],
+              maxSpeed: 30,
+              maxForce: 2
+            }
+          },
+          visual: {
+            shape: 'circle',
+            size: 5,
+            colorByState: {
+              property: 'Health.status',
+              minColor: '#34a853',
+              maxColor: '#ea4335',
+              colorMap: {
+                'S': '#34a853',  // Green for Susceptible
+                'I': '#ea4335',  // Red for Infected
+                'R': '#4285f4'   // Blue for Recovered
+              }
+            }
+          }
+        },
+        {
+          name: 'Susceptible',
+          extends: 'Person',
+          components: {
+            Health: { status: 'S', infectionTime: 0 }
+          },
+          visual: {
+            shape: 'circle',
+            size: 5,
+            color: '#34a853'
+          }
+        },
+        {
+          name: 'Infected',
+          extends: 'Person',
+          components: {
+            Health: { status: 'I', infectionTime: 0 }
+          },
+          visual: {
+            shape: 'circle',
+            size: 5,
+            color: '#ea4335'
+          }
+        },
+        {
+          name: 'Recovered',
+          extends: 'Person',
+          components: {
+            Health: { status: 'R', infectionTime: 0 }
+          },
+          visual: {
+            shape: 'circle',
+            size: 5,
+            color: '#4285f4'
+          }
+        }
+      ]
+    },
+
+    scales: {
+      spatial: {
+        spatial: {
+          type: 'continuous2D',
+          width: 600,
+          height: 400
+        },
+        boundary: 'bounded'
+      },
+      temporal: {
+        dt: 0.1,
+        maxTicks: 5000
+      }
+    },
+
+    processSchedule: [
+      { system: 'Steering', order: 'parallel' },
+      { system: 'Movement', order: 'parallel' },
+      { system: 'Interaction', order: 'sequential', shuffle: true }
+    ]
+  },
+
+  designConcepts: {
+    sensing: {
+      description: 'Agents can sense nearby agents within infection radius',
+      defaultRadius: 20
+    },
+
+    interaction: {
+      description: 'Susceptible agents can become infected when near infected agents',
+      rules: [
+        {
+          name: 'infection',
+          trigger: { onProximity: { radius: 15, filter: { hasComponent: 'Health' } } },
+          appliesTo: { eq: [{ prop: 'self.Health.status' }, 'S'] },
+          condition: { eq: [{ prop: 'other.Health.status' }, 'I'] },
+          effect: {
+            probability: {
+              chance: 0.05,
+              effect: {
+                sequence: [
+                  { set: { target: 'self.Health.status', value: 'I' } },
+                  { set: { target: 'self.Health.infectionTime', value: { prop: 'tick' } } },
+                  { emit: { event: 'infection', data: { victim: { prop: 'self.id' } } } }
+                ]
+              }
+            }
+          }
+        },
+        {
+          name: 'recovery',
+          trigger: { everyTick: true },
+          appliesTo: { eq: [{ prop: 'self.Health.status' }, 'I'] },
+          condition: {
+            gt: [
+              { sub: [{ prop: 'tick' }, { prop: 'self.Health.infectionTime' }] },
+              100
+            ]
+          },
+          effect: {
+            probability: {
+              chance: 0.1,
+              effect: {
+                sequence: [
+                  { set: { target: 'self.Health.status', value: 'R' } },
+                  { emit: { event: 'recovery', data: { recovered: { prop: 'self.id' } } } }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+
+    stochasticity: {
+      description: 'Infection and recovery are probabilistic'
+    },
+
+    observation: {
+      timeseries: [
+        {
+          name: 'susceptible',
+          query: { count: { filter: { eq: [{ prop: 'Health.status' }, 'S'] } } }
+        },
+        {
+          name: 'infected',
+          query: { count: { filter: { eq: [{ prop: 'Health.status' }, 'I'] } } }
+        },
+        {
+          name: 'recovered',
+          query: { count: { filter: { eq: [{ prop: 'Health.status' }, 'R'] } } }
+        }
+      ],
+      events: ['infection', 'recovery']
+    }
+  },
+
+  details: {
+    initialization: {
+      entities: [
+        {
+          // Use Person archetype (has colorByState) - Health.status defaults to 'S'
+          archetype: 'Person',
+          count: 95,
+          position: {
+            type: 'random',
+            region: {
+              min: { x: 20, y: 20 },
+              max: { x: 580, y: 380 }
+            }
+          },
+          propertyVariation: {
+            'Velocity.x': { distribution: 'uniform', min: -20, max: 20 },
+            'Velocity.y': { distribution: 'uniform', min: -20, max: 20 }
+          }
+        },
+        {
+          // Use Person archetype but override Health.status to 'I' for initial infected
+          archetype: 'Person',
+          count: 5,
+          position: {
+            type: 'cluster',
+            value: { x: 300, y: 200 },
+            spacing: 30
+          },
+          propertyVariation: {
+            'Velocity.x': { distribution: 'uniform', min: -20, max: 20 },
+            'Velocity.y': { distribution: 'uniform', min: -20, max: 20 },
+            'Health.status': { distribution: 'fixed', value: 'I' }
+          }
+        }
+      ]
+    }
+  },
+
+  uiParameters: [
+    {
+      name: 'Infection Probability',
+      path: 'params.infectionProb',
+      type: 'number',
+      min: 0,
+      max: 1,
+      step: 0.01,
+      description: 'Probability of infection per contact'
+    },
+    {
+      name: 'Recovery Time',
+      path: 'params.recoveryTime',
+      type: 'number',
+      min: 50,
+      max: 500,
+      step: 10,
+      description: 'Ticks before recovery chance starts'
+    }
+  ]
+}

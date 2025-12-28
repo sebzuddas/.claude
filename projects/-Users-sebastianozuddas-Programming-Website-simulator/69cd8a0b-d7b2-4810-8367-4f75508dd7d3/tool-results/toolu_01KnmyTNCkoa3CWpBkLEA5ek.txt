@@ -1,0 +1,29 @@
+   390→
+   391→export interface SimulationState {
+   392→  tick: number
+   393→  time: number
+   394→  entities: Map<EntityId, Entity>
+   395→  spatialIndex: SpatialIndex
+   396→  eventQueue: SimulationEvent[]
+   397→  timeseries: Map<string, number[]>
+   398→  eventLog: SimulationEvent[]
+   399→  seed: number
+   400→  rng: () => number
+   401→  paused: boolean
+   402→  speed: number
+   403→}
+   404→
+   405→export interface SimulationEvent {
+   406→  tick: number
+   407→  event: string
+   408→  entityId?: EntityId
+   409→  data?: Record<string, unknown>
+   410→}
+   411→
+   412→export interface SpatialIndex {
+   413→  type: SpatialType
+   414→  query(position: Vector2D, radius: number): EntityId[]
+
+<system-reminder>
+Whenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.
+</system-reminder>

@@ -1,0 +1,40 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/components/visualizations/SystemModel.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   365→              y: perpY * offsetAmount
+   366→            }
+   367→          }
+   368→
+   369→          function drawParticles(p: any, pool: Particle[]) {
+   370→            pool.forEach(particle => {
+   371→              if (!particle.active) return
+   372→
+   373→              const { edge, progress } = particle
+   374→
+   375→              // Calculate base position along the edge
+   376→              let x1 = edge.from.x
+   377→              let y1 = edge.from.y
+   378→              let x2 = edge.to.x
+   379→              let y2 = edge.to.y
+   380→
+   381→              // For bidirectional edges, offset to the parallel pipe
+   382→              if (edge.curved) {
+   383→                const offset = getParallelOffset(x1, y1, x2, y2, edge.curveOffset)
+   384→                x1 += offset.x
+   385→                y1 += offset.y
+   386→                x2 += offset.x
+   387→                y2 += offset.y
+   388→              }
+   389→
+   390→              // Interpolate along the (possibly offset) line
+   391→              const x = p.lerp(x1, x2, progress)
+   392→              const y = p.lerp(y1, y2, progress)
+   393→
+   394→              const isPositive = edge.weight >= 0
+   395→              p.fill(isPositive ? [50, 200, 50, 220] : [200, 50, 50, 220])
+   396→              p.noStroke()
+   397→              p.circle(x, y, PARTICLE_SIZE)
+   398→            })
+   399→          }
+   400→
+   401→          function drawNodes(p: any, nodes: Node[]) {
+   402→            nodes.forEach(node => {
+   403→              // Node color based on type

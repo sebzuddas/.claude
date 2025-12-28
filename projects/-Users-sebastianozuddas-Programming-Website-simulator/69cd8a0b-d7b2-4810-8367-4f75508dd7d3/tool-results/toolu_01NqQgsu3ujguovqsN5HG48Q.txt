@@ -1,0 +1,83 @@
+56-    const c = 0.5 // Damping coefficient
+57-
+58-    const demoData: VectorFieldData = {
+59-      A: [
+60-        [0, 1],
+61-        [-k / m, -c / m]
+62-      ],
+63-      labels: ['Position', 'Velocity'],
+64-      title: 'Mass-Spring-Damper System',
+65-      dimension: 2,
+66-      selectedStates: [0, 1],
+67-      bounds: {
+68-        min: [-3, -3],
+69-        max: [3, 3]
+70-      }
+71-    }
+72-
+73-    setData(demoData)
+74-  }
+75-
+76:  const loadLorenzAttractorDemo = () => {
+77-    / Lorenz attractor: nonlinear chaotic system
+78-    // dx/dt = σ(y - x)
+79-    // dy/dt = x(ρ - z) - y
+80-    // dz/dt = xy - βz
+81-    const sigma = 10
+82-    const rho = 28
+83-    const beta = 8 / 3
+84-
+85-    const demoData: VectorFieldData = {
+86-      f: (x: number[]) => {
+87-        const [x1, x2, x3] = x
+88-        return [
+89-          sigma * (x2 - x1),
+90-          x1 * (rho - x3) - x2,
+91-          x1 * x2 - beta * x3
+92-        ]
+93-      },
+94-      labels: ['x', 'y', 'z'],
+95-      title: 'Lorenz Attractor',
+96-      dimension: 3,
+--
+165-    } else if (result.data) {
+166-      setVectorFieldData(result.data)
+167-    }
+168-  }
+169-
+170-  return (
+171-    <VisualizationLayout
+172-      title="Vector Field Visualization"
+173-      description="Visualize 2D and 3D vector fields from linear and nonlinear dynamical systems"
+174-    >
+175-      {/* Controls */}
+176-      <div className="controls mb-4">
+177-        <div className="flex flex-wrap gap-2 items-center">
+178-          <button
+179-            onClick={loadMassSpringDamperDemo}
+180-            className="btn"
+181-          >
+182-            Mass-Spring-Damper (2D)
+183-          </button>
+184-          <button
+185:            onClick={loadLorenzAttractorDemo}
+186-            className="btn"
+187-          >
+188-            Lorenz Attractor (3D)
+189-          </button>
+190-          <div className="flex-grow" />
+191-          <button
+192-            onClick={() => router.push('/systemmodel')}
+193-            className="px-3 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded hover:from-green-600 hover:to-emerald-600 transition-colors text-sm font-semibold shadow-md"
+194-            title="Go to System Model Simulator"
+195-          >
+196-            🔧 System Simulator
+197-          </button>
+198-          <button
+199-            onClick={() => router.push('/statespace')}
+200-            className="px-3 py-2 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded hover:from-pink-600 hover:to-purple-600 transition-colors text-sm font-semibold shadow-md"
+201-            title="Go to State Space Visualizer"
+202-          >
+203-            🎨 Phase Portrait
+204-          </button>
+205-        </div>

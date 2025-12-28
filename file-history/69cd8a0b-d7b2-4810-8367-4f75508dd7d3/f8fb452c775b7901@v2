@@ -1,0 +1,624 @@
+/**
+ * Entity-Component-System (ECS) Core Implementation
+ *
+ * Provides the fundamental data structures for the ABM:
+ * - Entity: Unique identifier with component data
+ * - ComponentStore: Efficient storage for component data
+ * - World: Container for all entities and systems
+ * - SpatialHashGrid: Efficient spatial queries
+ */
+
+import type {
+  EntityId,
+  ComponentType,
+  ComponentData,
+  ArchetypeDefinition,
+  Vector2D,
+  SpatialIndex,
+  SpatialType,
+  BoundaryType
+} from '../types'
+
+// =============================================================================
+// UTILITY FUNCTIONS
+// =============================================================================
+
+/** Generate a unique entity ID */
+export function generateEntityId(): EntityId {
+  return `e_${Date.now().toString(36)}_${Math.random().toString(36).substr(2, 9)}`
+}
+
+/** Deep clone an object */
+export function deepClone<T>(obj: T): T {
+  if (obj === null || typeof obj !== 'object') {
+    return obj
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(item => deepClone(item)) as unknown as T
+  }
+  const cloned = {} as T
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      cloned[key] = deepClone(obj[key])
+    }
+  }
+  return cloned
+}
+
+// =============================================================================
+// ENTITY
+// =============================================================================
+
+export class Entity {
+  public readonly id: EntityId
+  public archetype: string
+  private components: Map<ComponentType, ComponentData>
+
+  constructor(id: EntityId, archetype: string) {
+    this.id = id
+    this.archetype = archetype
+    this.components = new Map()
+  }
+
+  hasComponent(type: ComponentType): boolean {
+    return this.components.has(type)
+  }
+
+  getComponent<T = ComponentData>(type: ComponentType): T | undefined {
+    return this.components.get(type) as T | undefined
+  }
+
+  setComponent(type: ComponentType, data: ComponentData): void {
+    this.components.set(type, data)
+  }
+
+  removeComponent(type: ComponentType): boolean {
+    return this.components.delete(type)
+  }
+
+  getComponentTypes(): ComponentType[] {
+    return Array.from(this.components.keys())
+  }
+
+  getAllComponents(): Map<ComponentType, ComponentData> {
+    return new Map(this.components)
+  }
+
+  /** Get a property value using a path like "Position.x" */
+  getProperty(path: string): unknown {
+    const parts = path.split('.')
+    const componentType = parts[0]
+    const component = this.components.get(componentType)
+    if (!component) return undefined
+
+    let value: unknown = component
+    for (let i = 1; i < parts.length; i++) {
+      if (value === null || value === undefined) return undefined
+      value = (value as Record<string, unknown>)[parts[i]]
+    }
+    return value
+  }
+
+  /** Set a property value using a path like "Position.x" */
+  setProperty(path: string, value: unknown): boolean {
+    const parts = path.split('.')
+    if (parts.length < 2) return false
+
+    const componentType = parts[0]
+    let component = this.components.get(componentType)
+    if (!component) {
+      component = {}
+      this.components.set(componentType, component)
+    }
+
+    let current: Record<string, unknown> = component as Record<string, unknown>
+    for (let i = 1; i < parts.length - 1; i++) {
+      if (current[parts[i]] === undefined) {
+        current[parts[i]] = {}
+      }
+      current = current[parts[i]] as Record<string, unknown>
+    }
+    current[parts[parts.length - 1]] = value
+    return true
+  }
+
+  /** Serialize entity to plain object */
+  serialize(): { id: EntityId; archetype: string; components: Record<ComponentType, ComponentData> } {
+    const components: Record<ComponentType, ComponentData> = {}
+    this.components.forEach((data, type) => {
+      components[type] = deepClone(data)
+    })
+    return { id: this.id, archetype: this.archetype, components }
+  }
+
+  /** Create entity from serialized data */
+  static deserialize(data: { id: EntityId; archetype: string; components: Record<ComponentType, ComponentData> }): Entity {
+    const entity = new Entity(data.id, data.archetype)
+    for (const [type, componentData] of Object.entries(data.components)) {
+      entity.setComponent(type, deepClone(componentData))
+    }
+    return entity
+  }
+}
+
+// =============================================================================
+// SPATIAL HASH GRID
+// =============================================================================
+
+export class SpatialHashGrid implements SpatialIndex {
+  type: SpatialType = 'continuous2D'
+  private cellSize: number
+  private width: number
+  private height: number
+  private boundary: BoundaryType
+  private grid: Map<string, Set<EntityId>>
+  private entityPositions: Map<EntityId, Vector2D>
+
+  constructor(width: number, height: number, cellSize: number = 50, boundary: BoundaryType = 'toroidal') {
+    this.width = width
+    this.height = height
+    this.cellSize = cellSize
+    this.boundary = boundary
+    this.grid = new Map()
+    this.entityPositions = new Map()
+  }
+
+  private getCellKey(x: number, y: number): string {
+    const cellX = Math.floor(x / this.cellSize)
+    const cellY = Math.floor(y / this.cellSize)
+    return `${cellX},${cellY}`
+  }
+
+  private wrapPosition(position: Vector2D): Vector2D {
+    if (this.boundary === 'toroidal') {
+      return {
+        x: ((position.x % this.width) + this.width) % this.width,
+        y: ((position.y % this.height) + this.height) % this.height
+      }
+    } else if (this.boundary === 'bounded') {
+      return {
+        x: Math.max(0, Math.min(this.width, position.x)),
+        y: Math.max(0, Math.min(this.height, position.y))
+      }
+    }
+    return position
+  }
+
+  insert(entityId: EntityId, position: Vector2D): void {
+    const wrapped = this.wrapPosition(position)
+    const key = this.getCellKey(wrapped.x, wrapped.y)
+
+    if (!this.grid.has(key)) {
+      this.grid.set(key, new Set())
+    }
+    this.grid.get(key)!.add(entityId)
+    this.entityPositions.set(entityId, wrapped)
+  }
+
+  remove(entityId: EntityId): void {
+    const position = this.entityPositions.get(entityId)
+    if (position) {
+      const key = this.getCellKey(position.x, position.y)
+      const cell = this.grid.get(key)
+      if (cell) {
+        cell.delete(entityId)
+        if (cell.size === 0) {
+          this.grid.delete(key)
+        }
+      }
+      this.entityPositions.delete(entityId)
+    }
+  }
+
+  update(entityId: EntityId, position: Vector2D): void {
+    this.remove(entityId)
+    this.insert(entityId, position)
+  }
+
+  query(center: Vector2D, radius: number): EntityId[] {
+    const result: EntityId[] = []
+    const radiusSquared = radius * radius
+
+    // Calculate cell range to check
+    const minCellX = Math.floor((center.x - radius) / this.cellSize)
+    const maxCellX = Math.floor((center.x + radius) / this.cellSize)
+    const minCellY = Math.floor((center.y - radius) / this.cellSize)
+    const maxCellY = Math.floor((center.y + radius) / this.cellSize)
+
+    for (let cellX = minCellX; cellX <= maxCellX; cellX++) {
+      for (let cellY = minCellY; cellY <= maxCellY; cellY++) {
+        const key = `${cellX},${cellY}`
+        const cell = this.grid.get(key)
+
+        if (cell) {
+          for (const entityId of cell) {
+            const pos = this.entityPositions.get(entityId)
+            if (pos) {
+              const distSquared = this.distanceSquared(center, pos)
+              if (distSquared <= radiusSquared) {
+                result.push(entityId)
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return result
+  }
+
+  private distanceSquared(a: Vector2D, b: Vector2D): number {
+    let dx = b.x - a.x
+    let dy = b.y - a.y
+
+    // Handle toroidal wrapping for distance calculation
+    if (this.boundary === 'toroidal') {
+      if (Math.abs(dx) > this.width / 2) {
+        dx = dx > 0 ? dx - this.width : dx + this.width
+      }
+      if (Math.abs(dy) > this.height / 2) {
+        dy = dy > 0 ? dy - this.height : dy + this.height
+      }
+    }
+
+    return dx * dx + dy * dy
+  }
+
+  getPosition(entityId: EntityId): Vector2D | undefined {
+    return this.entityPositions.get(entityId)
+  }
+
+  getAllPositions(): Map<EntityId, Vector2D> {
+    return new Map(this.entityPositions)
+  }
+
+  clear(): void {
+    this.grid.clear()
+    this.entityPositions.clear()
+  }
+}
+
+// =============================================================================
+// GRID 2D SPATIAL INDEX (for cellular automata)
+// =============================================================================
+
+export class Grid2DSpatialIndex implements SpatialIndex {
+  type: SpatialType = 'grid2D'
+  private width: number
+  private height: number
+  private cellSize: number
+  private boundary: BoundaryType
+  private grid: Map<string, EntityId>
+  private entityPositions: Map<EntityId, Vector2D>
+
+  constructor(width: number, height: number, cellSize: number = 1, boundary: BoundaryType = 'toroidal') {
+    this.width = width
+    this.height = height
+    this.cellSize = cellSize
+    this.boundary = boundary
+    this.grid = new Map()
+    this.entityPositions = new Map()
+  }
+
+  private getCellKey(x: number, y: number): string {
+    const cellX = Math.floor(x / this.cellSize)
+    const cellY = Math.floor(y / this.cellSize)
+    return `${cellX},${cellY}`
+  }
+
+  private wrapCell(x: number, y: number): { x: number; y: number } {
+    const gridWidth = Math.floor(this.width / this.cellSize)
+    const gridHeight = Math.floor(this.height / this.cellSize)
+
+    if (this.boundary === 'toroidal') {
+      return {
+        x: ((x % gridWidth) + gridWidth) % gridWidth,
+        y: ((y % gridHeight) + gridHeight) % gridHeight
+      }
+    } else if (this.boundary === 'bounded') {
+      return {
+        x: Math.max(0, Math.min(gridWidth - 1, x)),
+        y: Math.max(0, Math.min(gridHeight - 1, y))
+      }
+    }
+    return { x, y }
+  }
+
+  insert(entityId: EntityId, position: Vector2D): void {
+    const cellX = Math.floor(position.x / this.cellSize)
+    const cellY = Math.floor(position.y / this.cellSize)
+    const wrapped = this.wrapCell(cellX, cellY)
+    const key = `${wrapped.x},${wrapped.y}`
+
+    this.grid.set(key, entityId)
+    this.entityPositions.set(entityId, {
+      x: wrapped.x * this.cellSize,
+      y: wrapped.y * this.cellSize
+    })
+  }
+
+  remove(entityId: EntityId): void {
+    const position = this.entityPositions.get(entityId)
+    if (position) {
+      const key = this.getCellKey(position.x, position.y)
+      if (this.grid.get(key) === entityId) {
+        this.grid.delete(key)
+      }
+      this.entityPositions.delete(entityId)
+    }
+  }
+
+  update(entityId: EntityId, position: Vector2D): void {
+    this.remove(entityId)
+    this.insert(entityId, position)
+  }
+
+  query(center: Vector2D, radius: number): EntityId[] {
+    const result: EntityId[] = []
+    const cellRadius = Math.ceil(radius / this.cellSize)
+    const centerCellX = Math.floor(center.x / this.cellSize)
+    const centerCellY = Math.floor(center.y / this.cellSize)
+
+    for (let dx = -cellRadius; dx <= cellRadius; dx++) {
+      for (let dy = -cellRadius; dy <= cellRadius; dy++) {
+        const wrapped = this.wrapCell(centerCellX + dx, centerCellY + dy)
+        const key = `${wrapped.x},${wrapped.y}`
+        const entityId = this.grid.get(key)
+        if (entityId) {
+          result.push(entityId)
+        }
+      }
+    }
+
+    return result
+  }
+
+  /** Get entity at specific grid cell */
+  getEntityAt(cellX: number, cellY: number): EntityId | undefined {
+    const wrapped = this.wrapCell(cellX, cellY)
+    return this.grid.get(`${wrapped.x},${wrapped.y}`)
+  }
+
+  /** Get neighbors (Moore neighborhood) */
+  getNeighbors(cellX: number, cellY: number): EntityId[] {
+    const neighbors: EntityId[] = []
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        if (dx === 0 && dy === 0) continue
+        const wrapped = this.wrapCell(cellX + dx, cellY + dy)
+        const entityId = this.grid.get(`${wrapped.x},${wrapped.y}`)
+        if (entityId) {
+          neighbors.push(entityId)
+        }
+      }
+    }
+    return neighbors
+  }
+
+  getPosition(entityId: EntityId): Vector2D | undefined {
+    return this.entityPositions.get(entityId)
+  }
+
+  clear(): void {
+    this.grid.clear()
+    this.entityPositions.clear()
+  }
+}
+
+// =============================================================================
+// WORLD
+// =============================================================================
+
+export class World {
+  private entities: Map<EntityId, Entity>
+  private archetypes: Map<string, ArchetypeDefinition>
+  private spatialIndex: SpatialIndex
+  private pendingAdditions: Entity[]
+  private pendingRemovals: EntityId[]
+  private entityCounter: number
+
+  constructor(spatialIndex: SpatialIndex) {
+    this.entities = new Map()
+    this.archetypes = new Map()
+    this.spatialIndex = spatialIndex
+    this.pendingAdditions = []
+    this.pendingRemovals = []
+    this.entityCounter = 0
+  }
+
+  /** Register an archetype definition */
+  registerArchetype(archetype: ArchetypeDefinition): void {
+    this.archetypes.set(archetype.name, archetype)
+  }
+
+  /** Get archetype definition */
+  getArchetype(name: string): ArchetypeDefinition | undefined {
+    return this.archetypes.get(name)
+  }
+
+  /** Resolve archetype inheritance */
+  resolveArchetype(name: string): ArchetypeDefinition | undefined {
+    const archetype = this.archetypes.get(name)
+    if (!archetype) return undefined
+
+    if (!archetype.extends) {
+      return archetype
+    }
+
+    const parent = this.resolveArchetype(archetype.extends)
+    if (!parent) return archetype
+
+    // Merge parent and child components
+    const mergedComponents: Record<string, ComponentData> = {
+      ...deepClone(parent.components),
+      ...deepClone(archetype.components)
+    }
+
+    return {
+      ...archetype,
+      components: mergedComponents,
+      visual: archetype.visual || parent.visual
+    }
+  }
+
+  /** Create a new entity from an archetype */
+  createEntity(archetypeName: string, overrides?: Record<string, ComponentData>): Entity {
+    const archetype = this.resolveArchetype(archetypeName)
+    if (!archetype) {
+      throw new Error(`Unknown archetype: ${archetypeName}`)
+    }
+
+    this.entityCounter++
+    const id = `e_${this.entityCounter}`
+    const entity = new Entity(id, archetypeName)
+
+    // Add all components from archetype
+    for (const [componentType, componentData] of Object.entries(archetype.components)) {
+      entity.setComponent(componentType, deepClone(componentData))
+    }
+
+    // Apply overrides
+    if (overrides) {
+      for (const [componentType, componentData] of Object.entries(overrides)) {
+        const existing = entity.getComponent(componentType) || {}
+        entity.setComponent(componentType, { ...existing, ...deepClone(componentData) })
+      }
+    }
+
+    return entity
+  }
+
+  /** Add entity to world (queued until flush) */
+  addEntity(entity: Entity): void {
+    this.pendingAdditions.push(entity)
+  }
+
+  /** Remove entity from world (queued until flush) */
+  removeEntity(entityId: EntityId): void {
+    this.pendingRemovals.push(entityId)
+  }
+
+  /** Flush pending additions and removals */
+  flush(): void {
+    // Process removals first
+    for (const entityId of this.pendingRemovals) {
+      const entity = this.entities.get(entityId)
+      if (entity) {
+        this.spatialIndex.remove(entityId)
+        this.entities.delete(entityId)
+      }
+    }
+    this.pendingRemovals = []
+
+    // Process additions
+    for (const entity of this.pendingAdditions) {
+      this.entities.set(entity.id, entity)
+
+      // Add to spatial index if has Position component
+      const position = entity.getComponent<{ x: number; y: number }>('Position')
+      if (position) {
+        this.spatialIndex.insert(entity.id, position)
+      }
+    }
+    this.pendingAdditions = []
+  }
+
+  /** Get entity by ID */
+  getEntity(entityId: EntityId): Entity | undefined {
+    return this.entities.get(entityId)
+  }
+
+  /** Get all entities */
+  getAllEntities(): Entity[] {
+    return Array.from(this.entities.values())
+  }
+
+  /** Get entities with specific component */
+  getEntitiesWithComponent(componentType: ComponentType): Entity[] {
+    return this.getAllEntities().filter(e => e.hasComponent(componentType))
+  }
+
+  /** Get entities with all specified components */
+  getEntitiesWithComponents(componentTypes: ComponentType[]): Entity[] {
+    return this.getAllEntities().filter(e =>
+      componentTypes.every(type => e.hasComponent(type))
+    )
+  }
+
+  /** Get entities by archetype */
+  getEntitiesByArchetype(archetype: string): Entity[] {
+    return this.getAllEntities().filter(e => e.archetype === archetype)
+  }
+
+  /** Query entities within radius of position */
+  queryRadius(position: Vector2D, radius: number): Entity[] {
+    const entityIds = this.spatialIndex.query(position, radius)
+    return entityIds.map(id => this.entities.get(id)).filter((e): e is Entity => e !== undefined)
+  }
+
+  /** Get spatial index */
+  getSpatialIndex(): SpatialIndex {
+    return this.spatialIndex
+  }
+
+  /** Update entity position in spatial index */
+  updateEntityPosition(entityId: EntityId, position: Vector2D): void {
+    this.spatialIndex.update(entityId, position)
+  }
+
+  /** Get entity count */
+  getEntityCount(): number {
+    return this.entities.size
+  }
+
+  /** Clear all entities */
+  clear(): void {
+    this.entities.clear()
+    this.spatialIndex.clear()
+    this.pendingAdditions = []
+    this.pendingRemovals = []
+  }
+
+  /** Serialize world state */
+  serialize(): { entities: Array<{ id: EntityId; archetype: string; components: Record<ComponentType, ComponentData> }> } {
+    return {
+      entities: this.getAllEntities().map(e => e.serialize())
+    }
+  }
+
+  /** Deserialize world state */
+  deserialize(data: { entities: Array<{ id: EntityId; archetype: string; components: Record<ComponentType, ComponentData> }> }): void {
+    this.clear()
+    for (const entityData of data.entities) {
+      const entity = Entity.deserialize(entityData)
+      this.entities.set(entity.id, entity)
+
+      const position = entity.getComponent<{ x: number; y: number }>('Position')
+      if (position) {
+        this.spatialIndex.insert(entity.id, position)
+      }
+    }
+  }
+}
+
+// =============================================================================
+// SEEDED RANDOM NUMBER GENERATOR
+// =============================================================================
+
+export function createSeededRNG(seed: number): () => number {
+  let state = seed
+
+  return function(): number {
+    // Mulberry32 algorithm
+    state |= 0
+    state = (state + 0x6D2B79F5) | 0
+    let t = Math.imul(state ^ (state >>> 15), 1 | state)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+/** Generate a random seed */
+export function generateSeed(): number {
+  return Math.floor(Math.random() * 2147483647)
+}

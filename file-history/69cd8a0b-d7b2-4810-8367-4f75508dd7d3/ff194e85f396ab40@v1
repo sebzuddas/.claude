@@ -1,0 +1,266 @@
+{
+  "schemaVersion": "1.0",
+
+  "overview": {
+    "purpose": "Zombie Outbreak - humans flee from zombies, infected humans turn into zombies, survivors can fight back",
+
+    "entities": {
+      "componentTypes": [
+        {
+          "name": "Position",
+          "properties": {
+            "x": { "type": "number", "default": 0 },
+            "y": { "type": "number", "default": 0 }
+          }
+        },
+        {
+          "name": "Velocity",
+          "properties": {
+            "x": { "type": "number", "default": 0 },
+            "y": { "type": "number", "default": 0 }
+          }
+        },
+        {
+          "name": "AgentState",
+          "properties": {
+            "type": { "type": "enum", "enumValues": ["human", "zombie"], "default": "human" },
+            "health": { "type": "number", "default": 100 },
+            "stamina": { "type": "number", "default": 100 }
+          }
+        },
+        {
+          "name": "SteeringBehavior",
+          "properties": {
+            "rules": { "type": "string", "default": "[]" },
+            "maxSpeed": { "type": "number", "default": 50 },
+            "maxForce": { "type": "number", "default": 3 }
+          }
+        }
+      ],
+
+      "archetypes": [
+        {
+          "name": "Human",
+          "components": {
+            "Position": { "x": 0, "y": 0 },
+            "Velocity": { "x": 0, "y": 0 },
+            "AgentState": { "type": "human", "health": 100, "stamina": 100 },
+            "SteeringBehavior": {
+              "rules": [
+                { "type": "flee", "weight": 4.0, "query": { "radius": 100, "filter": { "eq": [{ "prop": "other.AgentState.type" }, "zombie"] } } },
+                { "type": "cohesion", "weight": 0.8, "query": { "radius": 60, "filter": { "eq": [{ "prop": "other.AgentState.type" }, "human"] } } },
+                { "type": "separation", "weight": 1.0, "query": { "radius": 20 } },
+                { "type": "wander", "weight": 0.5, "params": { "wanderRadius": 15, "wanderDistance": 30, "wanderJitter": 0.3 } }
+              ],
+              "maxSpeed": 55,
+              "maxForce": 4
+            }
+          },
+          "visual": {
+            "shape": "circle",
+            "size": 5,
+            "color": "#4285f4"
+          }
+        },
+        {
+          "name": "Zombie",
+          "components": {
+            "Position": { "x": 0, "y": 0 },
+            "Velocity": { "x": 0, "y": 0 },
+            "AgentState": { "type": "zombie", "health": 50, "stamina": 0 },
+            "SteeringBehavior": {
+              "rules": [
+                { "type": "seek", "weight": 3.0, "query": { "radius": 150, "filter": { "eq": [{ "prop": "other.AgentState.type" }, "human"] } } },
+                { "type": "cohesion", "weight": 0.5, "query": { "radius": 80, "filter": { "eq": [{ "prop": "other.AgentState.type" }, "zombie"] } } },
+                { "type": "separation", "weight": 0.8, "query": { "radius": 15 } },
+                { "type": "wander", "weight": 1.0, "params": { "wanderRadius": 25, "wanderDistance": 40, "wanderJitter": 0.5 } }
+              ],
+              "maxSpeed": 35,
+              "maxForce": 2
+            }
+          },
+          "visual": {
+            "shape": "triangle",
+            "size": 6,
+            "color": "#2d5a27"
+          }
+        }
+      ]
+    },
+
+    "scales": {
+      "spatial": {
+        "spatial": {
+          "type": "continuous2D",
+          "width": 600,
+          "height": 400
+        },
+        "boundary": "bounded"
+      },
+      "temporal": {
+        "dt": 0.05,
+        "maxTicks": 10000
+      }
+    },
+
+    "processSchedule": [
+      { "system": "Steering", "order": "parallel" },
+      { "system": "Movement", "order": "parallel" },
+      { "system": "Interaction", "order": "sequential", "shuffle": true }
+    ]
+  },
+
+  "designConcepts": {
+    "sensing": {
+      "description": "Humans sense nearby zombies and flee; zombies sense humans and pursue",
+      "defaultRadius": 100
+    },
+
+    "interaction": {
+      "description": "Zombies infect humans on contact; humans can fight back and destroy zombies",
+      "rules": [
+        {
+          "name": "zombieInfection",
+          "trigger": { "onProximity": { "radius": 12, "filter": { "eq": [{ "prop": "other.AgentState.type" }, "human"] } } },
+          "appliesTo": { "eq": [{ "prop": "self.AgentState.type" }, "zombie"] },
+          "condition": { "eq": [{ "prop": "other.AgentState.type" }, "human"] },
+          "effect": {
+            "probability": {
+              "chance": 0.15,
+              "effect": {
+                "sequence": [
+                  { "set": { "target": "other.AgentState.type", "value": "zombie" } },
+                  { "set": { "target": "other.AgentState.health", "value": 50 } },
+                  { "emit": { "event": "infection", "data": { "victim": { "prop": "other.id" } } } }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "name": "humanFightBack",
+          "trigger": { "onProximity": { "radius": 15, "filter": { "eq": [{ "prop": "other.AgentState.type" }, "zombie"] } } },
+          "appliesTo": { "eq": [{ "prop": "self.AgentState.type" }, "human"] },
+          "condition": {
+            "and": [
+              { "eq": [{ "prop": "other.AgentState.type" }, "zombie"] },
+              { "gt": [{ "prop": "self.AgentState.stamina" }, 20] }
+            ]
+          },
+          "effect": {
+            "probability": {
+              "chance": 0.03,
+              "effect": {
+                "sequence": [
+                  { "decrement": { "target": "self.AgentState.stamina", "amount": 15 } },
+                  { "destroy": { "target": "other" } },
+                  { "emit": { "event": "zombieKilled", "data": { "killer": { "prop": "self.id" } } } }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "name": "staminaRecovery",
+          "trigger": { "everyTick": true },
+          "appliesTo": { "eq": [{ "prop": "self.AgentState.type" }, "human"] },
+          "condition": { "lt": [{ "prop": "self.AgentState.stamina" }, 100] },
+          "effect": {
+            "increment": { "target": "self.AgentState.stamina", "amount": 0.1 }
+          }
+        },
+        {
+          "name": "zombieDecay",
+          "trigger": { "everyTick": true },
+          "appliesTo": { "eq": [{ "prop": "self.AgentState.type" }, "zombie"] },
+          "effect": {
+            "probability": {
+              "chance": 0.0005,
+              "effect": {
+                "sequence": [
+                  { "emit": { "event": "zombieDecayed", "data": { "zombie": { "prop": "self.id" } } } },
+                  { "destroy": { "target": "self" } }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+
+    "stochasticity": {
+      "description": "Infection, combat, and decay are probabilistic"
+    },
+
+    "observation": {
+      "timeseries": [
+        {
+          "name": "humans",
+          "query": { "count": { "filter": { "eq": [{ "prop": "AgentState.type" }, "human"] } } }
+        },
+        {
+          "name": "zombies",
+          "query": { "count": { "filter": { "eq": [{ "prop": "AgentState.type" }, "zombie"] } } }
+        }
+      ],
+      "events": ["infection", "zombieKilled", "zombieDecayed"]
+    }
+  },
+
+  "details": {
+    "initialization": {
+      "entities": [
+        {
+          "archetype": "Human",
+          "count": 80,
+          "position": {
+            "type": "random",
+            "region": {
+              "min": { "x": 20, "y": 20 },
+              "max": { "x": 580, "y": 380 }
+            }
+          },
+          "propertyVariation": {
+            "Velocity.x": { "distribution": "uniform", "min": -20, "max": 20 },
+            "Velocity.y": { "distribution": "uniform", "min": -20, "max": 20 },
+            "AgentState.stamina": { "distribution": "uniform", "min": 70, "max": 100 }
+          }
+        },
+        {
+          "archetype": "Zombie",
+          "count": 5,
+          "position": {
+            "type": "cluster",
+            "value": { "x": 300, "y": 200 },
+            "spacing": 40
+          },
+          "propertyVariation": {
+            "Velocity.x": { "distribution": "uniform", "min": -10, "max": 10 },
+            "Velocity.y": { "distribution": "uniform", "min": -10, "max": 10 }
+          }
+        }
+      ]
+    }
+  },
+
+  "uiParameters": [
+    {
+      "name": "Infection Rate",
+      "path": "params.infectionRate",
+      "type": "number",
+      "min": 0.01,
+      "max": 0.5,
+      "step": 0.01,
+      "description": "Probability of infection per contact"
+    },
+    {
+      "name": "Fight Back Rate",
+      "path": "params.fightBackRate",
+      "type": "number",
+      "min": 0.01,
+      "max": 0.2,
+      "step": 0.01,
+      "description": "Probability of human killing zombie in combat"
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/components/visualizations/SystemModel.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   731→    a.click()
+   732→    URL.revokeObjectURL(url)
+   733→  }
+   734→
+   735→  const copyCurrentState = () => {
+   736→    if (!simulationRef.current) return
+   737→
+   738→    const sim = simulationRef.current
+   739→    const currentState = {
+   740→      time: sim.t[currentTimeIndex],
+   741→      states: sim.x[currentTimeIndex],
+   742→      inputs: sim.u[currentTimeIndex],
+   743→      outputs: sim.y[currentTimeIndex],
+   744→      labels: data.labels
+   745→    }
+   746→
+   747→    navigator.clipboard.writeText(JSON.stringify(currentState, null, 2))
+   748→      .then(() => alert('Current state copied to clipboard!'))
+   749→      .catch(err => console.error('Failed to copy:', err))
+   750→  }
+   751→
+   752→  const openInStateSpaceVisualizer = () => {
+   753→    if (!simulationRef.current) return
+   754→
+   755→    // Prepare data in StateSpaceData format
+   756→    const stateSpaceData = {
+   757→      t: simulationRef.current.t,
+   758→      x: simulationRef.current.x,
+   759→      labels: data.labels?.states || undefined,
+   760→      title: data.title || 'System Simulation'
+   761→    }
+   762→
+   763→    // Store in sessionStorage
+   764→    sessionStorage.setItem('stateSpaceData', JSON.stringify(stateSpaceData))
+   765→
+   766→    // Navigate to state space visualizer
+   767→    router.push('/statespace')
+   768→  }
+   769→
+   770→  return (
+   771→    <div className="w-full">
+   772→      <div ref={canvasRef} />
+   773→
+   774→      {/* Playback Controls */}

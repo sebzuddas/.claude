@@ -1,0 +1,157 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/CLAUDE.md has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   152→  return () => {
+   153→    isMounted = false
+   154→    if (p5) p5.remove()
+   155→  }
+   156→}, [data, width, height, onError]) // No fontSizes!
+   157→```
+   158→
+   159→#### SystemModel Component (`/src/components/visualizations/SystemModel.tsx`)
+   160→
+   161→**Purpose**: Simulates discrete-time state-space systems and visualizes them as stocks-and-flows diagrams with animated particles.
+   162→
+   163→**Key Features:**
+   164→- **Force-directed graph layout** - States positioned based on A matrix structure
+   165→- **Draggable nodes** - Click and drag any node to reposition
+   166→- **Interactive hover info** - Shows connectivity metrics, flow rates, and connections
+   167→- **Animated flow particles** - Variable velocity based on flow magnitude
+   168→- **Bidirectional edge handling** - Parallel pipes for reverse connections
+   169→- **Export capabilities** - CSV, JSON, copy current state
+   170→- **Direct navigation** - "View Phase Portrait" button to State Space Visualizer
+   171→
+   172→**Implementation Patterns:**
+   173→```typescript
+   174→// Use refs to avoid P5 re-mounting on state changes
+   175→const currentTimeIndexRef = useRef(0)
+   176→const [currentTimeIndex, setCurrentTimeIndex] = useState(0)
+   177→
+   178→useEffect(() => {
+   179→  currentTimeIndexRef.current = currentTimeIndex
+   180→}, [currentTimeIndex])
+   181→
+   182→// P5 reads from ref instead of state
+   183→p.draw = () => {
+   184→  const idx = currentTimeIndexRef.current // No re-mount!
+   185→  // ... use idx
+   186→}
+   187→```
+   188→
+   189→**Force-Directed Layout:**
+   190→- Initializes states in circle
+   191→- Spring forces between connected nodes (proportional to |A[i][j]|)
+   192→- Repulsion forces prevent overlap
+   193→- Centering force keeps layout bounded
+   194→- 300 iterations for stable configuration
+   195→
+   196→**Bidirectional Edge Detection:**
+   197→```typescript
+   198→// Build adjacency map
+   199→const edgeMap = new Map<string, Edge>()
+   200→edges.forEach(edge => {
+   201→  edgeMap.set(`${edge.from.id}->${edge.to.id}`, edge)
+   202→})
+   203→
+   204→// Detect reverse edges
+   205→edges.forEach(edge => {
+   206→  if (edge.from.id === edge.to.id) return // Skip self-loops
+   207→
+   208→  const reverseKey = `${edge.to.id}->${edge.from.id}`
+   209→  if (edgeMap.get(reverseKey)) {
+   210→    // Mark as bidirectional with parallel offset
+   211→    edge.bidirectional = true
+   212→    edge.parallelOffset = BIDIRECTIONAL_OFFSET
+   213→  }
+   214→})
+   215→```
+   216→
+   217→**Critical Learning - Conditional Rendering vs Disabled:**
+   218→Initially used `disabled={!hasData}` for export buttons. Problem: buttons visible but unusable created confusion.
+   219→
+   220→Solution: Conditional rendering for primary actions
+   221→```typescript
+   222→{hasSimulationData && (
+   223→  <button onClick={openInStateSpaceVisualizer}>
+   224→    🎨 View Phase Portrait
+   225→  </button>
+   226→)}
+   227→```
+   228→
+   229→Benefits:
+   230→- Clearer UI - button only appears when functional
+   231→- Prevents errors - no risk of clicking when no data
+   232→- Better UX - users see what's available
+   233→
+   234→#### StateSpaceVisualization Component (`/src/components/visualizations/StateSpaceVisualization.tsx`)
+   235→
+   236→**Purpose**: Displays phase portraits (state vs state plots) from time series data.
+   237→
+   238→**Key Features:**
+   239→- **Multi-plot grid** - Shows all state pairs (upper triangle only)
+   240→- **Interactive state selection** - Toggle which states to visualize
+   241→- **Trajectory trails** - Adjustable length showing recent history
+   242→- **Current point tracking** - Red dot shows current position
+   243→- **Complete trajectory** - Faint gray line shows full path
+   244→- **Dual format support** - Accepts simple JSON or System Simulator exports
+   245→
+   246→**Data Integration:**
+   247→```typescript
+   248→// Accepts System Simulator export format
+   249→interface SystemSimulatorExport {
+   250→  metadata?: { title, dt, timeHorizon }
+   251→  system?: { A, B, C, D, labels }
+   252→  results: { t, x, u, y }  // Extract x and t for phase portrait
+   253→}
+   254→
+   255→// Or simple format
+   256→interface StateSpaceData {
+   257→  t: number[]
+   258→  x: number[][]  // [timeStep][stateIndex]
+   259→  labels?: string[]
+   260→  title?: string
+   261→}
+   262→```
+   263→
+   264→**SessionStorage Integration:**
+   265→Seamless navigation from System Simulator:
+   266→```typescript
+   267→// In SystemModel.tsx
+   268→const openInStateSpaceVisualizer = () => {
+   269→  const stateSpaceData = {
+   270→    t: simulationRef.current.t,
+   271→    x: simulationRef.current.x,
+   272→    labels: data.labels?.states,
+   273→    title: data.title
+   274→  }
+   275→  sessionStorage.setItem('stateSpaceData', JSON.stringify(stateSpaceData))
+   276→  router.push('/statespace')
+   277→}
+   278→
+   279→// In statespace/page.tsx
+   280→useEffect(() => {
+   281→  const sessionData = sessionStorage.getItem('stateSpaceData')
+   282→  if (sessionData) {
+   283→    const parsedData = JSON.parse(sessionData)
+   284→    setStateSpaceData(parsedData)
+   285→    sessionStorage.removeItem('stateSpaceData') // Clear after use
+   286→  }
+   287→}, [])
+   288→```
+   289→
+   290→**Grid Layout Calculation:**
+   291→For n selected states, shows n(n-1)/2 plots (upper triangle):
+   292→```typescript
+   293→const plotsPerRow = Math.ceil(Math.sqrt(gridSize * (gridSize - 1) / 2))
+   294→const plotWidth = width / plotsPerRow
+   295→const plotHeight = height / Math.ceil((gridSize * (gridSize - 1) / 2) / plotsPerRow)
+   296→
+   297→// Draw only i < j pairs
+   298→for (let i = 0; i < selected.length; i++) {
+   299→  for (let j = i + 1; j < selected.length; j++) {
+   300→    drawPhasePlot(stateI, stateJ, ...)
+   301→  }
+   302→}
+   303→```
+   304→
+   305→### Utility Classes (`/src/lib/utils.ts`)
+   306→
+   307→#### ColorUtils

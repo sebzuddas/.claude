@@ -1,0 +1,13 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/components/visualizations/VectorField.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   664→    fullState[selectedStates[0]] = x
+   665→    fullState[selectedStates[1]] = y
+   666→    fullState[selectedStates[2]] = z
+   667→
+   668→    // Integrate trajectory using RK4
+   669→    const dt = 0.05
+   670→    const tMax = simulationTime
+   671→    const steps = Math.floor(tMax / dt)
+   672→
+   673→    const t: number[] = []
+   674→    const points: number[][] = []
+   675→    let state = [...fullState]

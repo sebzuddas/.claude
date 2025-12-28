@@ -1,0 +1,171 @@
+# CLAUDE.md - cards.sebzuddas.com Landing Page
+
+## Project Overview
+
+Refactor the Stellar HTML5 UP template into a minimal landing page for a question cards product. The site will be hosted at `cards.sebzuddas.com` via GitHub Pages.
+
+## Purpose
+
+This is a **smoke test landing page** to validate demand before producing the product. The goal is to capture email signups from people interested in the question cards.
+
+---
+
+## Design Direction
+
+### Color Palette (Black & White)
+
+Replace Stellar's purple/pink gradient with a monochrome scheme:
+
+```scss
+// Primary
+$bg: #ffffff;                    // White background
+$bg-dark: #000000;               // Black for contrast sections
+$fg: #333333;                    // Dark gray body text
+$fg-bold: #000000;               // Black for headings
+$fg-light: #666666;              // Light gray for secondary text
+
+// Accents (use sparingly)
+$accent: #000000;                // Black for buttons, links
+$accent-hover: #333333;          // Dark gray on hover
+
+// Borders
+$border: #e0e0e0;                // Light gray borders
+$border-dark: #000000;           // Black borders for emphasis
+```
+
+### Typography
+
+- Clean, minimal sans-serif (keep Source Sans Pro or switch to Inter/IBM Plex Sans)
+- High contrast between headings and body
+- Generous whitespace
+- No decorative elements
+
+### Visual Style
+
+- Remove all gradients
+- Remove the overlay texture
+- Flat, minimal aesthetic
+- Strong black/white contrast
+- Simple line borders where needed
+- No colored icons—use black icons or remove entirely
+
+---
+
+## Content Structure
+
+### Section 1: Hero
+
+- Product name/headline
+- One-line value proposition
+- Mockup image of the cards (placeholder for now)
+- Primary CTA: "Get notified when we launch" → email signup
+
+### Section 2: What's Inside
+
+- Brief description of what the cards are
+- 3 key features/benefits (use the features grid, but simplified)
+- Keep copy minimal
+
+### Section 3: How It Works
+
+- Simple 3-step explanation
+- Use icons sparingly (black only)
+
+### Section 4: Email Signup (CTA)
+
+- Reinforce the value proposition
+- Email capture form
+- Note: "We'll notify you when we launch + early bird discount"
+
+### Footer
+
+- Minimal: © Seb Zuddas, link back to sebzuddas.com
+- No social links unless specifically added
+
+---
+
+## Technical Requirements
+
+### Files to Modify
+
+1. **index.html** — Restructure content for landing page sections
+2. **assets/sass/libs/_vars.scss** — Update color variables
+3. **assets/sass/base/_page.scss** — Remove gradient background
+4. **assets/sass/layout/_header.scss** — Simplify header styling
+5. **assets/sass/components/_button.scss** — Black/white button styles
+6. **assets/css/main.css** — Recompile from SASS (or edit directly if no SASS setup)
+
+### Files to Remove/Ignore
+
+- `generic.html` — Not needed
+- `elements.html` — Not needed (keep for reference if useful)
+- Unused images in `/images/`
+
+### Email Capture Integration
+
+Use one of:
+- Formspree (free, simple)
+- Buttondown
+- ConvertKit
+- Mailchimp embed
+
+Form should POST to external service, no backend needed.
+
+---
+
+## Reference: sebzuddas.com Styling
+
+The main site uses:
+- Black and white palette
+- Clean sans-serif typography
+- Minimal decorative elements
+- Strong hierarchy through size/weight, not color
+- Generous whitespace
+- Professional, systems-thinking aesthetic
+
+Match this tone—intelligent, minimal, no fluff.
+
+---
+
+## Responsive Behavior
+
+Keep Stellar's responsive breakpoints but ensure:
+- Hero section works well on mobile
+- Email form is thumb-friendly
+- No horizontal scroll
+- Images scale properly
+
+---
+
+## Placeholder Content
+
+Use this until final copy is written:
+
+**Headline:** "Questions that spark real conversation"
+
+**Subhead:** "A deck of thoughtfully crafted questions designed to deepen connections and create memorable moments."
+
+**Features:**
+1. 100+ conversation starters
+2. Works for couples, friends, families, or teams
+3. From light icebreakers to deeper questions
+
+**CTA:** "Be the first to know when we launch"
+
+---
+
+## Deployment
+
+1. Push to GitHub repository
+2. Enable GitHub Pages (Settings → Pages → main branch)
+3. Add CNAME file with `cards.sebzuddas.com`
+4. Configure DNS: CNAME record `cards` → `[username].github.io`
+5. Enable HTTPS in GitHub Pages settings
+
+---
+
+## Notes
+
+- This is a smoke test—speed over perfection
+- Track visits with simple analytics (Plausible, Umami, or Google Analytics)
+- Consider adding a "notify me" count if signups grow ("Join 50+ others waiting for launch")

@@ -1,0 +1,24 @@
+   800→        ) : (
+   801→          <div className="mt-4 pb-3 border-t border-gray-300 pt-3">
+   802→            <h4 className="text-sm font-semibold mb-3 text-center">Add Trajectory (max 2)</h4>
+   803→            <div className="flex items-center justify-center gap-3 flex-wrap">
+   804→              <div className="flex items-center gap-2">
+   805→                <label className="text-sm font-medium">
+   806→                  {data.labels?.[data.selectedStates?.[0] || 0] || 'x'}:
+   807→                </label>
+   808→                <input
+   809→                  type="number"
+   810→                  step="0.1"
+   811→                  value={ic3DX}
+   812→                  onChange={(e) => setIc3DX(e.target.value)}
+   813→                  className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+   814→                  disabled={trajectories.length >= 2}
+   815→                />
+   816→              </div>
+   817→              <div className="flex items-center gap-2">
+   818→                <label className="text-sm font-medium">
+   819→                  {data.labels?.[data.selectedStates?.[1] || 1] || 'y'}:
+
+<system-reminder>
+Whenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.
+</system-reminder>

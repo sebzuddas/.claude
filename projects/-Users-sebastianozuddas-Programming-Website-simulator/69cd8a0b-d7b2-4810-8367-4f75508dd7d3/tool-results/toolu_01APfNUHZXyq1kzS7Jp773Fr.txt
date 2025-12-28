@@ -1,0 +1,21 @@
+544-            const x0 = new Array(n).fill(0)
+545-            x0[stateX] = x
+546-            x0[stateY] = y
+547-
+548-            // Integrate trajectory
+549-            const traj = integrateTrajectory(x0)
+550-            setTrajectories(prev => [...prev, traj])
+551-            setCurrentTimeIndex(0)
+552-          }
+553-
+554:          function integrateTrajectory(x0: number[]): VectorFieldTrajectory {
+555-            const dt = 0.05
+556-            const tMax = 20
+557-            const steps = Math.floor(tMax / dt)
+558-
+559-            const t: number[] = []
+560-            const points: number[][] = []
+561-
+562-            let x = [...x0]
+563-
+564-            for (let i = 0; i < steps; i++) {

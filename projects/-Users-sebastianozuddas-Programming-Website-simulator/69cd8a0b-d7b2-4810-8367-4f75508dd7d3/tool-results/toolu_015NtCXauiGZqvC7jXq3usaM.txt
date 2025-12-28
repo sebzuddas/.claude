@@ -1,0 +1,187 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/CLAUDE.md has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   548→3. Call `p.remove()` in cleanup function
+   549→4. Use refs for data that shouldn't trigger re-renders
+   550→5. Document async loading patterns
+   551→
+   552→## Resources
+   553→- [Next.js Documentation](https://nextjs.org/docs)
+   554→- [P5.js Reference](https://p5js.org/reference/)
+   555→- [React Hooks](https://react.dev/reference/react)
+   556→- [Tailwind CSS](https://tailwindcss.com/docs)
+   557→
+   558→---
+   559→
+   560→## PLANNING: Vector Field Visualizer
+   561→
+   562→### Design Decisions Required
+   563→
+   564→**Instructions**: Fill in your requirements below. Once complete, notify Claude to review this section and implement.
+   565→
+   566→#### 1. System Definition & Input
+   567→**Question**: What type of systems should it support?
+   568→- [ ] Linear only: `dx/dt = Ax` (2×2 or 3×3 matrix)?
+   569→- [ ] Linear with input: `dx/dt = Ax + Bu`?
+   570→- [ ] Nonlinear: `dx/dt = f(x)` with custom functions?
+   571→
+   572→**Your Answer**:
+   573→
+   574→
+   575→**Question**: How should users input the system?
+   576→- [ ] Manual matrix entry (text fields)?
+   577→- [ ] JSON upload (from System Simulator)?
+   578→- [ ] Predefined examples?
+   579→- [ ] Connection to System Simulator (import A matrix directly)?
+   580→
+   581→**Your Answer**:
+   582→
+   583→
+   584→---
+   585→
+   586→#### 2. Dimensionality & Projection
+   587→**Question**: Which dimensions to visualize?
+   588→- [ ] 2D only (x1 vs x2)?
+   589→- [ ] 3D vector fields?
+   590→- [ ] For higher-dimensional systems (n>2), select which 2 states to plot?
+   591→
+   592→**Your Answer**:
+   593→
+   594→
+   595→**Question**: For 3+ state systems, how to handle other states?
+   596→- [ ] Fix them at zero?
+   597→- [ ] Fix at equilibrium values?
+   598→- [ ] User-specified slice through state space?
+   599→
+   600→**Your Answer**:
+   601→
+   602→
+   603→---
+   604→
+   605→#### 3. Vector Field Representation
+   606→**Question**: How to display the field?
+   607→- [ ] Arrow grid (classic)?
+   608→- [ ] Streamlines/flow lines?
+   609→- [ ] Both options (user toggle)?
+   610→- [ ] Color coding by magnitude?
+   611→
+   612→**Your Answer**:
+   613→
+   614→
+   615→**Question**: Arrow scaling?
+   616→- [ ] Normalized (all same length, shows direction only)?
+   617→- [ ] Proportional to magnitude (shows speed)?
+   618→- [ ] Log-scaled for large dynamic ranges?
+   619→
+   620→**Your Answer**:
+   621→
+   622→
+   623→---
+   624→
+   625→#### 4. Grid & Bounds
+   626→**Question**: State space range?
+   627→- [ ] Fixed (e.g., -10 to 10)?
+   628→- [ ] User-adjustable?
+   629→- [ ] Auto-calculated from eigenvalues/system characteristics?
+   630→
+   631→**Your Answer**:
+   632→
+   633→
+   634→**Question**: Grid density?
+   635→- [ ] Fixed grid (e.g., 20×20)?
+   636→- [ ] User-adjustable slider?
+   637→- [ ] Adaptive (denser near interesting features)?
+   638→
+   639→**Your Answer**:
+   640→
+   641→
+   642→---
+   643→
+   644→#### 5. Trajectory Integration
+   645→**Question**: Should users be able to plot solution trajectories?
+   646→- [ ] Click to add initial condition → show trajectory?
+   647→- [ ] Multiple trajectories simultaneously?
+   648→- [ ] Forward time, backward time, or both?
+   649→- [ ] Integration method (Euler, RK4)?
+   650→
+   651→**Your Answer**:
+   652→
+   653→
+   654→**Question**: Trajectory visualization?
+   655→- [ ] Animated point moving along path?
+   656→- [ ] Full path drawn?
+   657→- [ ] Fading trail?
+   658→
+   659→**Your Answer**:
+   660→
+   661→
+   662→---
+   663→
+   664→#### 6. Analysis Features
+   665→**Question**: What analytical tools to include?
+   666→- [ ] Equilibrium points (where dx/dt = 0)?
+   667→- [ ] Nullclines (isoclines where one state doesn't change)?
+   668→- [ ] Eigenvectors of A matrix?
+   669→- [ ] Stability classification (saddle, stable node, unstable spiral, etc.)?
+   670→- [ ] Lyapunov function contours?
+   671→
+   672→**Your Answer**:
+   673→
+   674→
+   675→---
+   676→
+   677→#### 7. Interactivity
+   678→**Question**: What interactions should be supported?
+   679→- [ ] Click to add trajectories?
+   680→- [ ] Drag matrix sliders to see real-time changes?
+   681→- [ ] Zoom/pan the view?
+   682→- [ ] Toggle nullclines/eigenvectors on/off?
+   683→
+   684→**Your Answer**:
+   685→
+   686→
+   687→---
+   688→
+   689→#### 8. Integration with Existing Pages
+   690→**Question**: How should it connect to other tools?
+   691→- [ ] "View Vector Field" button in System Simulator (like Phase Portrait)?
+   692→- [ ] Only for 2-state systems?
+   693→- [ ] Extract 2D subsystems from higher-dimensional systems?
+   694→
+   695→**Your Answer**:
+   696→
+   697→
+   698→---
+   699→
+   700→#### 9. Predefined Examples
+   701→**Question**: What examples to include?
+   702→
+   703→**Your Answer**:
+   704→
+   705→
+   706→---
+   707→
+   708→#### 10. Performance & Rendering
+   709→**Question**: Technology choice?
+   710→- [ ] P5.js (consistent with other visualizations)?
+   711→- [ ] Canvas API directly (better performance)?
+   712→- [ ] WebGL for 3D?
+   713→
+   714→**Your Answer**:
+   715→
+   716→
+   717→---
+   718→
+   719→### Summary of Requirements
+   720→Once you've filled in the sections above, provide a brief summary here:
+   721→
+   722→**Must-have features for v1**:
+   723→
+   724→
+   725→**Nice-to-have features for later**:
+   726→
+   727→
+   728→**Special considerations**:
+   729→
+   730→
+   731→---
+   732→**STATUS**: ⏳ Awaiting user input. Notify Claude when ready to implement.
+   733→

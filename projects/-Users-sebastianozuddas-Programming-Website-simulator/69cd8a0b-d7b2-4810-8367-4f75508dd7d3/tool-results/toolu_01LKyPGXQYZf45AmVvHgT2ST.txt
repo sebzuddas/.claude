@@ -1,0 +1,24 @@
+    25→    onComplete
+    26→  } = options
+    27→
+    28→  return new Promise(async (resolve, reject) => {
+    29→    try {
+    30→      // Dynamically import gif.js
+    31→      const GIF = (await import('gif.js')).default
+    32→
+    33→      const gif = new GIF({
+    34→        workers: 2,
+    35→        quality: 10,
+    36→        width: canvas.width,
+    37→        height: canvas.height,
+    38→        workerScript: '/gif.worker.js' // Will need to be added to public folder
+    39→      })
+    40→
+    41→      const totalFrames = duration * fps
+    42→      const frameDelay = 1000 / fps
+    43→      let capturedFrames = 0
+    44→
+
+<system-reminder>
+Whenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.
+</system-reminder>

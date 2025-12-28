@@ -1,0 +1,29 @@
+   195→            drawNodes(p, nodes)
+   196→
+   197→            // Draw title
+   198→            if (data.title) {
+   199→              p.fill(60)
+   200→              p.textSize(20)
+   201→              p.textAlign(p.CENTER, p.TOP)
+   202→              p.text(data.title, width / 2, 10)
+   203→            }
+   204→
+   205→            // Draw time indicator
+   206→            const currentTime = simulationRef.current.t[currentTimeIndex]
+   207→            p.fill(60)
+   208→            p.textSize(14)
+   209→            p.textAlign(p.RIGHT, p.TOP)
+   210→            p.text(`t = ${currentTime.toFixed(2)}s`, width - 20, 10)
+   211→          }
+   212→
+   213→          // Helper functions
+   214→          function updateNodeValues(nodes: Node[], sim: SimulationResult, timeIdx: number) {
+   215→            nodes.forEach(node => {
+   216→              if (node.type === 'input') {
+   217→                node.value = sim.u[timeIdx][node.index]
+   218→              } else if (node.type === 'state') {
+   219→                node.value = sim.x[timeIdx][node.index]
+
+<system-reminder>
+Whenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.
+</system-reminder>

@@ -1,0 +1,24 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/lib/abm/renderer/pixiRenderer.ts has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   293→      const visual = this.archetypeVisuals.get(entityObj.archetype) || {}
+   294→      const size = visual.size || 5
+   295→      let color = this.archetypeColors.get(entityObj.archetype) || DEFAULT_COLORS[0]
+   296→
+   297→      // Color by state if configured
+   298→      if (visual.colorByState) {
+   299→        const value = entityObj.getProperty(visual.colorByState.property)
+   300→        if (typeof value === 'number') {
+   301→          // Normalize value (assuming 0-100 range, adjust as needed)
+   302→          const t = Math.max(0, Math.min(1, value / 100))
+   303→          color = interpolateColor(visual.colorByState.minColor, visual.colorByState.maxColor, t)
+   304→        } else if (typeof value === 'string' && visual.colorByState.colorMap) {
+   305→          // Use colorMap for enum/string values
+   306→          const mappedColor = visual.colorByState.colorMap[value]
+   307→          if (mappedColor) {
+   308→            color = hexToNumber(mappedColor)
+   309→          }
+   310→        }
+   311→      }
+   312→
+   313→      // Clear and redraw
+   314→      graphics.clear()
+   315→

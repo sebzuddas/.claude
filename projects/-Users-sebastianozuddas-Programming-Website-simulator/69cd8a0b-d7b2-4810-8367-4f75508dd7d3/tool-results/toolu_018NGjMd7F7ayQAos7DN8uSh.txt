@@ -1,0 +1,188 @@
+     1→// Type definitions for the data visualization platform
+     2→
+     3→export interface HeatMapData {
+     4→  data: number[][];
+     5→  title?: string;
+     6→  labels?: {
+     7→    x?: string[];
+     8→    y?: string[];
+     9→  };
+    10→  colorScale?: string;
+    11→}
+    12→
+    13→export interface ScatterPlotData {
+    14→  points: Array<{
+    15→    x: number;
+    16→    y: number;
+    17→    label?: string;
+    18→  }>;
+    19→  title?: string;
+    20→  xLabel?: string;
+    21→  yLabel?: string;
+    22→}
+    23→
+    24→export interface NetworkNode {
+    25→  id: string;
+    26→  label?: string;
+    27→  size?: number;
+    28→  color?: string;
+    29→  group?: number;
+    30→}
+    31→
+    32→export interface NetworkEdge {
+    33→  source: string;
+    34→  target: string;
+    35→  weight?: number;
+    36→  directed?: boolean;
+    37→  label?: string;
+    38→}
+    39→
+    40→export interface NetworkGraphData {
+    41→  nodes: NetworkNode[];
+    42→  edges: NetworkEdge[];
+    43→  title?: string;
+    44→  directed?: boolean;
+    45→}
+    46→
+    47→export interface ParticleSystemConfig {
+    48→  modelType: 'particleSystem';
+    49→  parameters: {
+    50→    particleCount: number;
+    51→    gravity: number;
+    52→    damping: number;
+    53→    bounds?: {
+    54→      width: number;
+    55→      height: number;
+    56→    };
+    57→  };
+    58→  initialConditions?: {
+    59→    positions: string;
+    60→    velocities: string;
+    61→  };
+    62→  forces?: string[];
+    63→  title?: string;
+    64→}
+    65→
+    66→export interface ParticleSystemData extends ParticleSystemConfig {
+    67→  // Alias for consistency with other visualization data types
+    68→}
+    69→
+    70→export interface FlockingConfig {
+    71→  modelType: 'flocking';
+    72→  parameters: {
+    73→    boidCount: number;
+    74→    perceptionRadius: number;
+    75→    separationDistance: number;
+    76→    separationForce: number;
+    77→    alignmentForce: number;
+    78→    cohesionForce: number;
+    79→    maxSpeed: number;
+    80→    maxForce: number;
+    81→  };
+    82→  title?: string;
+    83→}
+    84→
+    85→export interface FlockingData extends FlockingConfig {
+    86→  // Alias for consistency with other visualization data types
+    87→}
+    88→
+    89→export interface SystemModelData {
+    90→  A: number[][];  // State matrix (n×n)
+    91→  B: number[][];  // Input matrix (n×m)
+    92→  C: number[][];  // Output matrix (p×n)
+    93→  D: number[][];  // Feedthrough matrix (p×m)
+    94→  x0: number[];   // Initial conditions
+    95→  u: number[] | number[][];  // Input sequence (constant or time-varying)
+    96→  labels?: {
+    97→    states?: string[];   // State variable names
+    98→    inputs?: string[];   // Input names
+    99→    outputs?: string[];  // Output names
+   100→  };
+   101→  dt?: number;          // Time step (default: 0.1)
+   102→  timeHorizon?: number; // Simulation time (0 = 300s default)
+   103→  title?: string;
+   104→}
+   105→
+   106→export interface ColorPalette {
+   107→  name: string;
+   108→  description?: string;
+   109→  colors: string[];
+   110→}
+   111→
+   112→export interface Theme {
+   113→  name: string;
+   114→  colors: {
+   115→    primary: string;
+   116→    secondary: string;
+   117→    accent: string;
+   118→    background: string;
+   119→    surface: string;
+   120→    text: string;
+   121→    textSecondary: string;
+   122→    textLight: string;
+   123→    border: string;
+   124→    error: string;
+   125→    warning: string;
+   126→    success: string;
+   127→  };
+   128→  typography?: {
+   129→    fontFamily: string;
+   130→    fontSizes: Record<string, string>;
+   131→    fontWeights: Record<string, number>;
+   132→  };
+   133→}
+   134→
+   135→export interface ThemeConfig {
+   136→  themes: Record<string, Theme>;
+   137→  colorPalettes: Record<string, ColorPalette>;
+   138→  visualizationDefaults: Record<string, {
+   139→    defaultPalette: string;
+   140→    fontSize: string;
+   141→    titleSize: string;
+   142→    labelSize?: string;
+   143→    pointColors?: string[];
+   144→  }>;
+   145→}
+   146→
+   147→export interface VisualizationProps {
+   148→  data?: any;
+   149→  width?: number;
+   150→  height?: number;
+   151→  className?: string;
+   152→  onDataChange?: (data: any) => void;
+   153→  onError?: (error: string) => void;
+   154→}
+   155→
+   156→export interface DataValidationResult {
+   157→  valid: boolean;
+   158→  errors: string[];
+   159→}
+   160→
+   161→export interface FileUploadResult {
+   162→  data?: any;
+   163→  error?: string;
+   164→}
+   165→
+   166→// P5.js related types
+   167→export interface P5Instance {
+   168→  setup: () => void;
+   169→  draw: () => void;
+   170→  windowResized?: () => void;
+   171→  mousePressed?: () => void;
+   172→  mouseMoved?: () => void;
+   173→  keyPressed?: () => void;
+   174→}
+   175→
+   176→export type ColorTuple = [number, number, number];
+   177→
+   178→export interface VisualizationState {
+   179→  data: any;
+   180→  isLoading: boolean;
+   181→  error: string | null;
+   182→  colorPalette: string;
+   183→  fontSize: number;
+   184→}
+
+<system-reminder>
+Whenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.
+</system-reminder>

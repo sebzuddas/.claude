@@ -1,0 +1,25 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/components/visualizations/SystemModel.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+    48→const PARTICLE_SIZE = 6
+    49→const PIPE_WIDTH = 8  // Slightly larger than particle for pipe effect
+    50→const BIDIRECTIONAL_OFFSET = 15  // Offset for parallel pipes in bidirectional edges (increased for visibility)
+    51→
+    52→export default function SystemModel({
+    53→  data,
+    54→  width = 1200,
+    55→  height = 800,
+    56→  onError
+    57→}: SystemModelProps) {
+    58→  const router = useRouter()
+    59→  const canvasRef = useRef<HTMLDivElement>(null)
+    60→  const controlsRef = useRef<HTMLDivElement>(null)
+    61→  const [p5Instance, setP5Instance] = useState<any>(null)
+    62→  const simulationRef = useRef<SimulationResult | null>(null)
+    63→  const [currentTimeIndex, setCurrentTimeIndex] = useState(0)
+    64→  const currentTimeIndexRef = useRef(0) // Ref for P5 to read without re-mounting
+    65→  const [isPlaying, setIsPlaying] = useState(false)
+    66→  const [simulationError, setSimulationError] = useState<string | null>(null)
+    67→  const simulationErrorRef = useRef<string | null>(null) // Ref for P5 to read
+    68→
+    69→  // Sync state to refs so P5 can read without re-mounting
+    70→  useEffect(() => {
+    71→    currentTimeIndexRef.current = currentTimeIndex

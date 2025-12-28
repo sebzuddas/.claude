@@ -1,0 +1,44 @@
+   595→
+   596→        {/* Individual Agent-level Plot */}
+   597→        <div className="bg-white rounded-lg shadow-lg p-4">
+   598→          <h3 className="font-semibold mb-2">Agent-Level Metrics (Individual)</h3>
+   599→          <p className="text-xs text-gray-500 mb-2">Shows average values and distributions across individual agents</p>
+   600→          <div className="h-48 relative">
+   601→            {timeseries.size > 0 ? (
+   602→              <TimeseriesPlot data={timeseries} type="individual" />
+   603→            ) : (
+   604→              <div className="h-full flex items-center justify-center text-gray-400">
+   605→                Run simulation to see agent-level data
+   606→              </div>
+   607→            )}
+   608→          </div>
+   609→        </div>
+   610→      </div>
+   611→
+   612→      {/* Instructions */}
+   613→      <div className="w-full max-w-4xl bg-white rounded-lg shadow-lg p-4 mt-4">
+   614→        <h3 className="font-semibold mb-2">Instructions</h3>
+   615→        <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside grid grid-cols-1 md:grid-cols-2">
+   616→          <li>Select a demo or upload a custom JSON model</li>
+   617→          <li>Click Play to start the simulation</li>
+   618→          <li>Click on agents to inspect their state</li>
+   619→          <li>Use Speed control to slow down or speed up</li>
+   620→          <li>Enable Trails to see agent movement history</li>
+   621→          <li>Export data as JSON or CSV for analysis</li>
+   622→        </ul>
+   623→      </div>
+   624→
+   625→      {/* Example JSON Format */}
+   626→      <div className="w-full max-w-4xl mt-8">
+   627→        <h3 className="text-lg font-semibold mb-4">Expected JSON Format:</h3>
+   628→        <p className="text-sm text-gray-600 mb-3">
+   629→          ABM models follow the ODD (Overview, Design concepts, Details) protocol structure.
+   630→        </p>
+   631→        <CodeBlock
+   632→          code={{
+   633→            "schemaVersion": "1.0",
+   634→            "overview": {
+
+<system-reminder>
+Whenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.
+</system-reminder>

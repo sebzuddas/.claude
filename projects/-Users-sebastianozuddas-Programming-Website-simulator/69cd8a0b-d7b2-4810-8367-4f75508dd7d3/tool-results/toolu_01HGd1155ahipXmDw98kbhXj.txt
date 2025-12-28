@@ -1,0 +1,18 @@
+src/components/visualizations/SystemModel.tsx(4,58): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+src/components/visualizations/SystemModel.tsx(53,3): error TS2339: Property 'width' does not exist on type 'SystemModelProps'.
+src/components/visualizations/SystemModel.tsx(54,3): error TS2339: Property 'height' does not exist on type 'SystemModelProps'.
+src/components/visualizations/SystemModel.tsx(55,3): error TS2339: Property 'onError' does not exist on type 'SystemModelProps'.
+src/components/visualizations/SystemModel.tsx(124,29): error TS2339: Property 'default' does not exist on type 'typeof p5'.
+src/components/visualizations/SystemModel.tsx(570,5): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/visualizations/SystemModel.tsx(571,7): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/visualizations/SystemModel.tsx(574,7): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/visualizations/SystemModel.tsx(575,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/visualizations/SystemModel.tsx(576,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/visualizations/SystemModel.tsx(584,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/visualizations/SystemModel.tsx(592,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/visualizations/SystemModel.tsx(600,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/visualizations/SystemModel.tsx(611,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/visualizations/SystemModel.tsx(612,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/visualizations/SystemModel.tsx(620,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/visualizations/SystemModel.tsx(621,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/components/visualizations/SystemModel.tsx(622,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.

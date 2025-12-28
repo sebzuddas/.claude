@@ -1,0 +1,15 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/app/abm/page.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   947→      legendY += 16
+   948→      colorIndex++
+   949→    })
+   950→
+   951→  }, [data, type, selectedMetrics])
+   952→
+   953→  return (
+   954→    <canvas
+   955→      ref={canvasRef}
+   956→      className="w-full h-full"
+   957→    />
+   958→  )
+   959→}
+   960→

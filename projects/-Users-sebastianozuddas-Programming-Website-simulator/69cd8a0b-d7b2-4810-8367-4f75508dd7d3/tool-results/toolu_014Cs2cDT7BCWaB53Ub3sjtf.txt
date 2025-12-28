@@ -1,0 +1,22 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/components/visualizations/VectorField.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   163→            p.textAlign(p.CENTER, p.TOP)
+   164→            p.text(labelY, 0, 0)
+   165→            p.pop()
+   166→
+   167→            // Title
+   168→            if (data.title) {
+   169→              p.fill(60)
+   170→              p.textSize(18)
+   171→              p.textAlign(p.CENTER, p.TOP)
+   172→              p.text(data.title, width / 2, 10)
+   173→            }
+   174→
+   175→            // Color legend
+   176→            if (showArrows) {
+   177→              drawColorLegend(p)
+   178→            }
+   179→          }
+   180→
+   181→          function draw3D(p: any) {
+   182→            // 3D rendering
+   183→            p.orbitControl()

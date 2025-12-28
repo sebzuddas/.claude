@@ -1,0 +1,54 @@
+   196→  // Load demo on mount and when selection changes
+   197→  useEffect(() => {
+   198→    const demo = demoModels[selectedDemo]
+   199→    if (demo) {
+   200→      initializeSimulation(demo)
+   201→    }
+   202→    // eslint-disable-next-line react-hooks/exhaustive-deps
+   203→  }, [selectedDemo])
+   204→
+   205→  // =============================================================================
+   206→  // SIMULATION LOOP
+   207→  // =============================================================================
+   208→
+   209→  useEffect(() => {
+   210→    if (!controllerRef.current || !rendererRef.current) return
+   211→
+   212→    const controller = controllerRef.current
+   213→    const renderer = rendererRef.current
+   214→
+   215→    const loop = (timestamp: number) => {
+   216→      const state = controller.getState()
+   217→
+   218→      if (!state.paused) {
+   219→        // Calculate time since last tick
+   220→        const elapsed = timestamp - lastTickTimeRef.current
+   221→        const tickInterval = 1000 / (10 * speed) // 10 ticks per second at 1x speed
+   222→
+   223→        if (elapsed >= tickInterval) {
+   224→          controller.step()
+   225→          lastTickTimeRef.current = timestamp
+   226→        }
+   227→      }
+   228→
+   229→      // Always render
+   230→      renderer.render(controller.getEntities())
+   231→
+   232→      animationFrameRef.current = requestAnimationFrame(loop)
+   233→    }
+   234→
+   235→    animationFrameRef.current = requestAnimationFrame(loop)
+   236→
+   237→    return () => {
+   238→      if (animationFrameRef.current) {
+   239→        cancelAnimationFrame(animationFrameRef.current)
+   240→      }
+   241→    }
+   242→  }, [speed, simState?.paused])
+   243→
+   244→  // =============================================================================
+   245→  // CONTROLS
+
+<system-reminder>
+Whenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.
+</system-reminder>

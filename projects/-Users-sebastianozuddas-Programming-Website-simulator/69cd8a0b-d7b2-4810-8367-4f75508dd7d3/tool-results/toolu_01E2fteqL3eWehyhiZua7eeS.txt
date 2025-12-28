@@ -1,0 +1,10 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/CLAUDE.md has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+    35→- **State Space Visualizer** - `/statespace` - Phase portraits and trajectory visualization
+    36→- **Particle System** - `/particles` - Physics-based particle simulation
+    37→- **Flocking Behavior** - `/flocking` - Emergent group behavior simulation
+    38→
+    39→### 3. Data Input Methods
+    40→1. **URL Parameters** - JSON data encoded in query string
+    41→2. **File Upload** - Drag & drop JSON files with validation
+    42→3. **PostMessage API** - For iframe embedding and external communication
+    43→4. **Demo Data** - Built-in example datasets for each visualization

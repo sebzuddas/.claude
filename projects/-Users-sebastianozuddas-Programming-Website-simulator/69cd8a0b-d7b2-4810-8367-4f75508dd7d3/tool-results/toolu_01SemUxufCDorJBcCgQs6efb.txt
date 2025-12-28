@@ -1,0 +1,26 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/app/abm/page.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+    35→// =============================================================================
+    36→// MAIN COMPONENT
+    37→// =============================================================================
+    38→
+    39→export default function ABMPage() {
+    40→  // State
+    41→  const [model, setModel] = useState<ABMModelDefinition | null>(null)
+    42→  const [simState, setSimState] = useState<SimulationState | null>(null)
+    43→  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' }>()
+    44→  const [timeseries, setTimeseries] = useState<Map<string, TimeseriesData>>(new Map())
+    45→  const [inspectedEntity, setInspectedEntity] = useState<InspectedEntity | null>(null)
+    46→  const [selectedDemo, setSelectedDemo] = useState<string>('flocking')
+    47→  const [showTrails, setShowTrails] = useState(false)
+    48→  const [speed, setSpeed] = useState(1)
+    49→
+    50→  // Graph selection state
+    51→  const [selectedAggregateMetrics, setSelectedAggregateMetrics] = useState<string[]>([])
+    52→  const [selectedArchetype, setSelectedArchetype] = useState<string>('')
+    53→  const [selectedAgentId, setSelectedAgentId] = useState<EntityId>('')
+    54→  const [selectedAgentProperties, setSelectedAgentProperties] = useState<string[]>([])
+    55→  const [agentTimeseries, setAgentTimeseries] = useState<Map<string, TimeseriesData>>(new Map())
+    56→
+    57→  // Refs
+    58→  const containerRef = useRef<HTMLDivElement>(null)
+    59→  const controllerRef = useRef<SimulationController | null>(null)

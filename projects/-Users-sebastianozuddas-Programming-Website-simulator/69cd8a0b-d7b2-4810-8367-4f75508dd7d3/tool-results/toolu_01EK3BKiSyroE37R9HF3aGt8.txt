@@ -1,0 +1,24 @@
+    68→
+    69→export interface VisualConfig {
+    70→  shape?: 'circle' | 'square' | 'triangle' | 'diamond' | 'icon'
+    71→  iconUrl?: string
+    72→  size?: number
+    73→  color?: string
+    74→  colorByState?: {
+    75→    property: PropertyPath
+    76→    minColor: string
+    77→    maxColor: string
+    78→  }
+    79→}
+    80→
+    81→// =============================================================================
+    82→// ENTITY INITIALIZATION
+    83→// =============================================================================
+    84→
+    85→export interface EntitySpawnConfig {
+    86→  archetype: string
+    87→  count?: number
+
+<system-reminder>
+Whenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.
+</system-reminder>

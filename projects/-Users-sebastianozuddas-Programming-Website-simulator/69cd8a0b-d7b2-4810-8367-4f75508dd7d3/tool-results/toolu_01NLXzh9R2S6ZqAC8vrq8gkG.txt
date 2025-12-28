@@ -1,0 +1,32 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/app/systemmodel/page.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   147→      setSystemModelData(result.data)
+   148→    }
+   149→  }
+   150→
+   151→  const generateRCCircuitDemo = () => {
+   152→    // RC Circuit: R=100Ω, Cap=10mF
+   153→    // State: x = capacitor voltage
+   154→    // Input: u = input voltage
+   155→    // Output: y = capacitor voltage
+   156→    //
+   157→    // dx/dt = -1/(RC)*x + 1/(RC)*u
+   158→    // y = x
+   159→
+   160→    const R = 100      // Resistance in Ω
+   161→    const Cap = 0.01   // Capacitance in F (10mF)
+   162→    const RC = R * Cap
+   163→    const dt = 0.05
+   164→
+   165→    // Continuous: dx/dt = -1/(RC)*x + 1/(RC)*u
+   166→    const A_cont = [[-1/RC]]
+   167→    const B_cont = [[1/RC]]
+   168→
+   169→    // Discretize
+   170→    const A = [[1 + dt*A_cont[0][0]]]
+   171→    const B = [[dt*B_cont[0][0]]]
+   172→    const C_mat = [[1]]
+   173→    const D_mat = [[0]]
+   174→
+   175→    const x0 = [0] // Initially discharged
+   176→    const u = [5]  // 5V step input
+   177→

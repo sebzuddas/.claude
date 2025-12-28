@@ -1,0 +1,84 @@
+   850→      data.forEach((ts, name) => displayData.set(name, ts))
+   851→    }
+   852→
+   853→    if (displayData.size === 0) {
+   854→      ctx.fillStyle = '#9ca3af'
+   855→      ctx.font = '14px sans-serif'
+   856→      ctx.textAlign = 'center'
+   857→      ctx.fillText(
+   858→        type === 'individual' ? 'No individual-level metrics defined' : 'No data available',
+   859→        width / 2,
+   860→        height / 2
+   861→      )
+   862→      return
+   863→    }
+   864→
+   865→    // Find data range
+   866→    let minVal = Infinity
+   867→    let maxVal = -Infinity
+   868→    let maxTick = 0
+   869→
+   870→    displayData.forEach(ts => {
+   871→      for (const v of ts.values) {
+   872→        minVal = Math.min(minVal, v)
+   873→        maxVal = Math.max(maxVal, v)
+   874→      }
+   875→      maxTick = Math.max(maxTick, ts.ticks.length > 0 ? ts.ticks[ts.ticks.length - 1] : 0)
+   876→    })
+   877→
+   878→    if (minVal === Infinity) return
+   879→
+   880→    // Add padding to range
+   881→    const range = maxVal - minVal || 1
+   882→    minVal -= range * 0.1
+   883→    maxVal += range * 0.1
+   884→
+   885→    // Draw axes
+   886→    ctx.strokeStyle = '#ccc'
+   887→    ctx.lineWidth = 1
+   888→    ctx.beginPath()
+   889→    ctx.moveTo(padding, padding)
+   890→    ctx.lineTo(padding, height - padding)
+   891→    ctx.lineTo(width - padding, height - padding)
+   892→    ctx.stroke()
+   893→
+   894→    // Draw axis labels
+   895→    ctx.fillStyle = '#666'
+   896→    ctx.font = '10px sans-serif'
+   897→    ctx.textAlign = 'center'
+   898→    ctx.fillText('Time (ticks)', width / 2, height - 5)
+   899→    ctx.save()
+   900→    ctx.translate(12, height / 2)
+   901→    ctx.rotate(-Math.PI / 2)
+   902→    ctx.fillText(type === 'aggregate' ? 'Count' : 'Value', 0, 0)
+   903→    ctx.restore()
+   904→
+   905→    // Colors for each series
+   906→    const colors = type === 'aggregate'
+   907→      ? ['#4285f4', '#ea4335', '#fbbc04', '#34a853', '#ff6d01', '#9b59b6']
+   908→      : ['#8e44ad', '#16a085', '#e67e22', '#2980b9', '#c0392b']
+   909→    let colorIndex = 0
+   910→
+   911→    // Draw data
+   912→    displayData.forEach((ts, name) => {
+   913→      if (ts.values.length < 2) return
+   914→
+   915→      ctx.strokeStyle = colors[colorIndex % colors.length]
+   916→      ctx.lineWidth = 2
+   917→      ctx.beginPath()
+   918→
+   919→      for (let i = 0; i < ts.values.length; i++) {
+   920→        const x = padding + (ts.ticks[i] / maxTick) * (width - 2 * padding)
+   921→        const y = height - padding - ((ts.values[i] - minVal) / (maxVal - minVal)) * (height - 2 * padding)
+   922→
+   923→        if (i === 0) {
+   924→          ctx.moveTo(x, y)
+   925→        } else {
+   926→          ctx.lineTo(x, y)
+   927→        }
+   928→      }
+   929→
+
+<system-reminder>
+Whenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.
+</system-reminder>

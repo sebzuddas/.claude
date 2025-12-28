@@ -1,0 +1,24 @@
+    55→  private components: Map<ComponentType, ComponentData>
+    56→
+    57→  constructor(id: EntityId, archetype: string) {
+    58→    this.id = id
+    59→    this.archetype = archetype
+    60→    this.components = new Map()
+    61→  }
+    62→
+    63→  hasComponent(type: ComponentType): boolean {
+    64→    return this.components.has(type)
+    65→  }
+    66→
+    67→  getComponent<T extends ComponentData>(type: ComponentType): T | undefined {
+    68→    return this.components.get(type) as T | undefined
+    69→  }
+    70→
+    71→  setComponent(type: ComponentType, data: ComponentData): void {
+    72→    this.components.set(type, data)
+    73→  }
+    74→
+
+<system-reminder>
+Whenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.
+</system-reminder>

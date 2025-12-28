@@ -1,0 +1,16 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/components/visualizations/SystemModel.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   736→
+   737→  return positions.map(p => ({x: p.x, y: p.y}))
+   738→}
+   739→
+   740→// Create neural network layout
+   741→function createNeuralNetworkLayout(
+   742→  data: SystemModelData,
+   743→  _sim: SimulationResult,
+   744→  width: number,
+   745→  height: number
+   746→): { nodes: Node[], edges: Edge[] } {
+   747→  const { A, B, C, labels } = data
+   748→
+   749→  const n = A.length // States
+   750→  const m = B[0]?.length ?? 0 // Inputs

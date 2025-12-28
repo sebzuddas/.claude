@@ -1,0 +1,890 @@
+'use client'
+
+import { useEffect, useRef, useState } from 'react'
+import type { SystemModelData, VisualizationProps } from '@/types'
+
+interface SystemModelProps extends VisualizationProps {
+  data: SystemModelData
+}
+
+// Simulation result storing all time steps
+interface SimulationResult {
+  t: number[]      // Time points
+  x: number[][]    // State trajectories [timeStep][stateIndex]
+  u: number[][]    // Input trajectories [timeStep][inputIndex]
+  y: number[][]    // Output trajectories [timeStep][outputIndex]
+}
+
+// Node for visualization
+interface Node {
+  id: string
+  type: 'input' | 'state' | 'output'
+  index: number
+  label: string
+  x: number
+  y: number
+  value: number
+}
+
+// Edge for visualization
+interface Edge {
+  from: Node
+  to: Node
+  weight: number
+  flowRate: number
+  bidirectional: boolean      // True if this edge should curve (for bidirectional edges)
+  parallelOffset: number  // Offset for curve (positive = curve up/right)
+}
+
+// Particle for flow animation
+interface Particle {
+  edge: Edge
+  progress: number  // 0 to 1
+  active: boolean
+}
+
+// Constants for pipe visualization
+const PARTICLE_SIZE = 6
+const PIPE_WIDTH = 8  // Slightly larger than particle for pipe effect
+const BIDIRECTIONAL_OFFSET = 15  // Offset for parallel pipes in bidirectional edges (increased for visibility)
+
+export default function SystemModel({
+  data,
+  width = 1200,
+  height = 800,
+  onError
+}: SystemModelProps) {
+  const canvasRef = useRef<HTMLDivElement>(null)
+  const controlsRef = useRef<HTMLDivElement>(null)
+  const [p5Instance, setP5Instance] = useState<any>(null)
+  const simulationRef = useRef<SimulationResult | null>(null)
+  const [currentTimeIndex, setCurrentTimeIndex] = useState(0)
+  const currentTimeIndexRef = useRef(0) // Ref for P5 to read without re-mounting
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [simulationError, setSimulationError] = useState<string | null>(null)
+  const simulationErrorRef = useRef<string | null>(null) // Ref for P5 to read
+
+  // Sync state to refs so P5 can read without re-mounting
+  useEffect(() => {
+    currentTimeIndexRef.current = currentTimeIndex
+  }, [currentTimeIndex])
+
+  useEffect(() => {
+    simulationErrorRef.current = simulationError
+  }, [simulationError])
+
+  // Run simulation when data changes
+  useEffect(() => {
+    if (!data) return
+
+    try {
+      const result = runSimulation(data)
+      simulationRef.current = result
+      setCurrentTimeIndex(0)
+      currentTimeIndexRef.current = 0
+      setSimulationError(null)
+      simulationErrorRef.current = null
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Simulation failed'
+      setSimulationError(errorMsg)
+      simulationErrorRef.current = errorMsg
+      onError?.(errorMsg)
+    }
+  }, [data, onError])
+
+  // Auto-play animation
+  useEffect(() => {
+    if (!isPlaying || !simulationRef.current) return
+
+    const interval = setInterval(() => {
+      setCurrentTimeIndex((prev) => {
+        if (!simulationRef.current) return prev
+        const next = prev + 1
+        if (next >= simulationRef.current.t.length) {
+          setIsPlaying(false)
+          return prev
+        }
+        return next
+      })
+    }, 50) // Update every 50ms
+
+    return () => clearInterval(interval)
+  }, [isPlaying])
+
+  // P5.js visualization
+  useEffect(() => {
+    let p5: any
+    let isMounted = true
+
+    const loadP5 = async () => {
+      if (typeof window !== 'undefined' && canvasRef.current) {
+        canvasRef.current.innerHTML = ''
+
+        const p5Module = await import('p5')
+        const P5 = p5Module.default
+
+        if (!isMounted) return
+
+        const sketch = (p: any) => {
+          let nodes: Node[] = []
+          let edges: Edge[] = []
+          const particlePool: Particle[] = []
+
+          p.setup = () => {
+            const canvas = p.createCanvas(width, height - 100) // Reserve space for controls
+            canvas.parent(canvasRef.current)
+            canvas.style('display', 'block')
+            canvas.style('margin', '0 auto')
+
+            p.textAlign(p.CENTER, p.CENTER)
+
+            // Initialize layout
+            if (simulationRef.current && data) {
+              const layout = createNeuralNetworkLayout(data, simulationRef.current, width, height - 100)
+              nodes = layout.nodes
+              edges = layout.edges
+
+              // Initialize fixed particles per edge (conservation of particles)
+              const particlesPerEdge = 6
+              edges.forEach(edge => {
+                for (let i = 0; i < particlesPerEdge; i++) {
+                  particlePool.push({
+                    edge: edge,
+                    progress: i / particlesPerEdge, // Evenly distributed
+                    active: true // Always active (conserved)
+                  })
+                }
+              })
+            }
+
+            p.frameRate(30)
+          }
+
+          p.draw = () => {
+            p.background(250)
+
+            // Read from refs to avoid re-mounting on state change
+            if (simulationErrorRef.current) {
+              p.fill(200, 50, 50)
+              p.textSize(16)
+              p.textAlign(p.CENTER, p.CENTER)
+              p.text(simulationErrorRef.current, width / 2, height / 2)
+              return
+            }
+
+            if (!simulationRef.current || !data) {
+              p.fill(150)
+              p.textSize(16)
+              p.textAlign(p.CENTER, p.CENTER)
+              p.text('No simulation data', width / 2, (height - 100) / 2)
+              return
+            }
+
+            // Update node values based on current time (read from ref!)
+            updateNodeValues(nodes, simulationRef.current, currentTimeIndexRef.current)
+            updateEdgeFlowRates(edges, nodes)
+
+            // Update particles with variable speed (no spawning - particles are conserved)
+            updateParticles(particlePool)
+
+            // Draw edges
+            drawEdges(p, edges)
+
+            // Draw particles
+            drawParticles(p, particlePool)
+
+            // Draw nodes
+            drawNodes(p, nodes)
+
+            // Draw title
+            if (data.title) {
+              p.fill(60)
+              p.textSize(20)
+              p.textAlign(p.CENTER, p.TOP)
+              p.text(data.title, width / 2, 10)
+            }
+
+            // Draw time indicator (read from ref!)
+            const currentTime = simulationRef.current.t[currentTimeIndexRef.current]
+            p.fill(60)
+            p.textSize(14)
+            p.textAlign(p.RIGHT, p.TOP)
+            p.text(`t = ${currentTime.toFixed(2)}s`, width - 20, 10)
+          }
+
+          // Helper functions
+          function updateNodeValues(nodes: Node[], sim: SimulationResult, timeIdx: number) {
+            nodes.forEach(node => {
+              if (node.type === 'input') {
+                node.value = sim.u[timeIdx][node.index]
+              } else if (node.type === 'state') {
+                node.value = sim.x[timeIdx][node.index]
+              } else if (node.type === 'output') {
+                node.value = sim.y[timeIdx][node.index]
+              }
+            })
+          }
+
+          function updateEdgeFlowRates(edges: Edge[], nodes: Node[]) {
+            edges.forEach(edge => {
+              // Flow rate is the weighted contribution from source node
+              edge.flowRate = edge.weight * edge.from.value
+            })
+          }
+
+          function updateParticles(pool: Particle[]) {
+            pool.forEach(particle => {
+              const { edge } = particle
+
+              // Calculate particle speed based on flow rate (variable velocity)
+              const baseSpeed = 0.015 // Base speed per frame
+              const referenceFlow = 1.0 // Reference flow rate for normalization
+
+              // Speed proportional to flow magnitude
+              const absFlowRate = Math.abs(edge.flowRate)
+              const speed = baseSpeed * (absFlowRate / referenceFlow)
+
+              // Update progress based on flow direction
+              if (edge.flowRate >= 0) {
+                // Positive flow: move forward
+                particle.progress += speed
+                if (particle.progress >= 1) {
+                  particle.progress -= 1 // Wraparound to start
+                }
+              } else {
+                // Negative flow: move backward
+                particle.progress -= speed
+                if (particle.progress < 0) {
+                  particle.progress += 1 // Wraparound to end
+                }
+              }
+
+              // Clamp to [0, 1] just in case
+              particle.progress = Math.max(0, Math.min(1, particle.progress))
+            })
+          }
+
+          function drawEdges(p: any, edges: Edge[]) {
+            edges.forEach(edge => {
+              const { from, to, weight, flowRate, bidirectional, parallelOffset } = edge
+
+              // Arrow color based on current flow direction (not static weight)
+              const isPositive = flowRate >= 0
+              p.stroke(isPositive ? [50, 150, 50, 50] : [150, 50, 50, 50]) // Red/Green/Blue/Alpha
+              p.strokeWeight(PIPE_WIDTH) // Pipe-like width
+
+              // Draw arrow (parallel pipe if bidirectional, straight otherwise)
+              drawArrow(p, from, to, isPositive, bidirectional, parallelOffset)
+
+              // Calculate label position
+              let midX, midY
+              if (bidirectional) {
+                // For parallel pipes, offset the label position using canonical direction
+                const useReverse = from.id > to.id
+                const refX1 = useReverse ? to.x : from.x
+                const refY1 = useReverse ? to.y : from.y
+                const refX2 = useReverse ? from.x : to.x
+                const refY2 = useReverse ? from.y : to.y
+
+                const offset = getParallelOffset(refX1, refY1, refX2, refY2, Math.abs(parallelOffset))
+                const sign = parallelOffset > 0 ? 1 : -1
+
+                midX = (from.x + to.x) / 2 + offset.x * sign
+                midY = (from.y + to.y) / 2 + offset.y * sign
+              } else {
+                midX = (from.x + to.x) / 2
+                midY = (from.y + to.y) / 2
+              }
+
+              // Draw +/- sign in the middle
+              p.fill(isPositive ? [50, 150, 50] : [150, 50, 50])
+              p.noStroke()
+              p.textSize(18)
+              p.textAlign(p.CENTER, p.CENTER)
+              p.text(isPositive ? '+' : '-', midX, midY)
+
+              // Draw flow rate label
+              p.fill(60)
+              p.noStroke()
+              p.textSize(10)
+              p.textAlign(p.CENTER, p.BOTTOM)
+              p.text(flowRate.toFixed(2), midX, midY - 15)
+
+              // Draw weight
+              p.textAlign(p.CENTER, p.TOP)
+              p.fill(100)
+              p.text(`w=${weight.toFixed(2)}`, midX, midY + 15)
+            })
+          }
+
+          function drawArrow(p: any, from: Node, to: Node, isPositive: boolean, isBidirectional: boolean, offsetAmount: number) {
+            let x1 = from.x
+            let y1 = from.y
+            let x2 = to.x
+            let y2 = to.y
+
+            // For bidirectional edges, draw parallel pipe offset from center
+            if (isBidirectional) {
+              // Use a consistent reference direction for perpendicular calculation
+              // Always calculate based on the canonical direction (lexicographically smaller ID first)
+              const useReverse = from.id > to.id
+              const refX1 = useReverse ? x2 : x1
+              const refY1 = useReverse ? y2 : y1
+              const refX2 = useReverse ? x1 : x2
+              const refY2 = useReverse ? y1 : y2
+
+              // Get perpendicular offset using canonical direction
+              const offset = getParallelOffset(refX1, refY1, refX2, refY2, Math.abs(offsetAmount))
+
+              // Apply offset with correct sign
+              const sign = offsetAmount > 0 ? 1 : -1
+              x1 += offset.x * sign
+              y1 += offset.y * sign
+              x2 += offset.x * sign
+              y2 += offset.y * sign
+            }
+
+            // Draw pipe (line)
+            p.line(x1, y1, x2, y2)
+
+            // Draw arrowhead proportioned to pipe width
+            const angle = p.atan2(y2 - y1, x2 - x1)
+            const arrowSize = PIPE_WIDTH * 2.5 // Proportioned to pipe width
+
+            p.push()
+            p.translate(x2, y2)
+            p.rotate(angle)
+            p.fill(isPositive ? [50, 150, 50] : [150, 50, 50])
+            p.noStroke()
+            p.triangle(0, arrowSize / 2, 0, -arrowSize / 2, arrowSize, 0)
+            p.pop()
+          }
+
+          // Helper: Get parallel offset for bidirectional pipes
+          function getParallelOffset(x1: number, y1: number, x2: number, y2: number, offsetAmount: number) {
+            // Calculate perpendicular direction
+            const dx = x2 - x1
+            const dy = y2 - y1
+            const len = Math.sqrt(dx * dx + dy * dy)
+
+            if (len === 0) return { x: 0, y: 0 }
+
+            // Perpendicular unit vector
+            const perpX = -dy / len
+            const perpY = dx / len
+
+            return {
+              x: perpX * offsetAmount,
+              y: perpY * offsetAmount
+            }
+          }
+
+          function drawParticles(p: any, pool: Particle[]) {
+            pool.forEach(particle => {
+              if (!particle.active) return
+
+              const { edge, progress } = particle
+
+              // Calculate base position along the edge
+              let x1 = edge.from.x
+              let y1 = edge.from.y
+              let x2 = edge.to.x
+              let y2 = edge.to.y
+
+              // For bidirectional edges, offset to the parallel pipe using canonical direction
+              if (edge.bidirectional) {
+                // Use same canonical direction as in drawArrow
+                const useReverse = edge.from.id > edge.to.id
+                const refX1 = useReverse ? x2 : x1
+                const refY1 = useReverse ? y2 : y1
+                const refX2 = useReverse ? x1 : x2
+                const refY2 = useReverse ? y1 : y2
+
+                const offset = getParallelOffset(refX1, refY1, refX2, refY2, Math.abs(edge.parallelOffset))
+                const sign = edge.parallelOffset > 0 ? 1 : -1
+
+                x1 += offset.x * sign
+                y1 += offset.y * sign
+                x2 += offset.x * sign
+                y2 += offset.y * sign
+              }
+
+              // Interpolate along the (possibly offset) line
+              // Note: direction is already handled in updateParticles (progress increases/decreases)
+              const x = p.lerp(x1, x2, progress)
+              const y = p.lerp(y1, y2, progress)
+
+              // Particle color based on current flow direction
+              const isPositive = edge.flowRate >= 0
+              p.fill(isPositive ? [50, 200, 50, 220] : [200, 50, 50, 220])
+              p.noStroke()
+              p.circle(x, y, PARTICLE_SIZE)
+            })
+          }
+
+          function drawNodes(p: any, nodes: Node[]) {
+            nodes.forEach(node => {
+              // Node color based on type
+              let nodeColor: number[]
+              if (node.type === 'input') {
+                nodeColor = [100, 150, 255]
+              } else if (node.type === 'state') {
+                nodeColor = [255, 180, 100]
+              } else {
+                nodeColor = [150, 100, 255]
+              }
+
+              // Draw circle
+              p.fill(nodeColor)
+              p.stroke(60)
+              p.strokeWeight(2)
+              p.circle(node.x, node.y, 60)
+
+              // Draw label
+              p.fill(255)
+              p.noStroke()
+              p.textSize(12)
+              p.textAlign(p.CENTER, p.CENTER)
+              p.text(node.label, node.x, node.y)
+
+              // Draw value below
+              p.fill(60)
+              p.textSize(11)
+              p.textAlign(p.CENTER, p.TOP)
+              p.text(node.value.toFixed(3), node.x, node.y + 35)
+            })
+          }
+        }
+
+        p5 = new P5(sketch)
+        setP5Instance(p5)
+      }
+    }
+
+    loadP5()
+
+    return () => {
+      isMounted = false
+      if (p5) {
+        p5.remove()
+      }
+    }
+  }, [data, width, height]) // Don't include refs - they update without re-mounting!
+
+  // Playback control handlers
+  const handlePlayPause = () => {
+    if (!simulationRef.current) return
+
+    if (currentTimeIndex >= simulationRef.current.t.length - 1) {
+      // Reset if at end
+      setCurrentTimeIndex(0)
+      setIsPlaying(true)
+    } else {
+      setIsPlaying(!isPlaying)
+    }
+  }
+
+  const handleStepForward = () => {
+    if (!simulationRef.current) return
+    setCurrentTimeIndex(Math.min(currentTimeIndex + 1, simulationRef.current.t.length - 1))
+  }
+
+  const handleStepBackward = () => {
+    setCurrentTimeIndex(Math.max(currentTimeIndex - 1, 0))
+  }
+
+  const handleReset = () => {
+    setCurrentTimeIndex(0)
+    setIsPlaying(false)
+  }
+
+  const handleScrub = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value)
+    setCurrentTimeIndex(value)
+  }
+
+  return (
+    <div className="w-full">
+      <div ref={canvasRef} />
+
+      {/* Playback Controls */}
+      <div ref={controlsRef} className="mt-4 p-4 bg-gray-100 rounded-lg">
+        <div className="flex items-center justify-center gap-4 mb-3">
+          <button
+            onClick={handleReset}
+            className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
+            disabled={!simulationRef.current}
+          >
+            Reset
+          </button>
+
+          <button
+            onClick={handleStepBackward}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+            disabled={!simulationRef.current || currentTimeIndex === 0}
+          >
+            ← Step
+          </button>
+
+          <button
+            onClick={handlePlayPause}
+            className="px-6 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors font-semibold"
+            disabled={!simulationRef.current}
+          >
+            {isPlaying ? 'Pause' : 'Play'}
+          </button>
+
+          <button
+            onClick={handleStepForward}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+            disabled={!simulationRef.current || currentTimeIndex >= (simulationRef.current?.t.length ?? 0) - 1}
+          >
+            Step →
+          </button>
+        </div>
+
+        {/* Timeline scrubber */}
+        {simulationRef.current && (
+          <div className="w-full">
+            <input
+              type="range"
+              min={0}
+              max={simulationRef.current.t.length - 1}
+              value={currentTimeIndex}
+              onChange={handleScrub}
+              className="w-full"
+            />
+            <div className="flex justify-between text-xs text-gray-600 mt-1">
+              <span>0s</span>
+              <span>{simulationRef.current.t[simulationRef.current.t.length - 1].toFixed(1)}s</span>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Discrete-time simulation
+function runSimulation(data: SystemModelData): SimulationResult {
+  const { A, B, C, D, x0, u, dt = 0.1, timeHorizon = 0 } = data
+
+  // Validate matrices
+  const n = A.length // Number of states
+  const m = B[0]?.length ?? 0 // Number of inputs
+  const p = C.length // Number of outputs
+
+  if (A.some(row => row.length !== n)) {
+    throw new Error('Matrix A must be square (n×n)')
+  }
+  if (B.length !== n || B.some(row => row.length !== m)) {
+    throw new Error('Matrix B must be n×m')
+  }
+  if (C.some(row => row.length !== n)) {
+    throw new Error('Matrix C must be p×n')
+  }
+  if (D.length !== p || D.some(row => row.length !== m)) {
+    throw new Error('Matrix D must be p×m')
+  }
+  if (x0.length !== n) {
+    throw new Error('Initial condition x0 must have length n')
+  }
+
+  // Determine simulation time
+  const T = timeHorizon === 0 ? 300 : timeHorizon // 5 minutes default
+  const steps = Math.floor(T / dt)
+
+  // Initialize arrays
+  const t: number[] = []
+  const x: number[][] = []
+  const uArr: number[][] = []
+  const y: number[][] = []
+
+  // Parse input sequence
+  let inputSequence: number[][]
+  if (Array.isArray(u[0])) {
+    // Time-varying input
+    inputSequence = u as number[][]
+  } else {
+    // Constant input - repeat for all time steps
+    inputSequence = Array(steps).fill(u as number[])
+  }
+
+  // Initial state
+  let xCurrent = [...x0]
+
+  // Simulate
+  for (let k = 0; k < steps; k++) {
+    t.push(k * dt)
+    x.push([...xCurrent])
+
+    // Get input at this time step
+    const uCurrent = inputSequence[k % inputSequence.length] || Array(m).fill(0)
+    uArr.push([...uCurrent])
+
+    // Compute output: y = Cx + Du
+    const yCurrent = matrixVectorMultiply(C, xCurrent).map(
+      (val, i) => val + dotProduct(D[i], uCurrent)
+    )
+    y.push(yCurrent)
+
+    // Update state: x[k+1] = Ax[k] + Bu[k]
+    const Ax = matrixVectorMultiply(A, xCurrent)
+    const Bu = matrixVectorMultiply(B, uCurrent)
+    xCurrent = Ax.map((val, i) => val + Bu[i])
+  }
+
+  return { t, x, u: uArr, y }
+}
+
+// Matrix-vector multiplication
+function matrixVectorMultiply(matrix: number[][], vector: number[]): number[] {
+  return matrix.map(row => dotProduct(row, vector))
+}
+
+// Dot product
+function dotProduct(a: number[], b: number[]): number {
+  return a.reduce((sum, val, i) => sum + val * (b[i] ?? 0), 0)
+}
+
+// Force-directed layout for state nodes based on A matrix structure
+function forceDirectedStateLayout(A: number[][], width: number, height: number, margin: number): {x: number, y: number}[] {
+  const n = A.length
+  if (n === 0) return []
+
+  // Initialize positions in a circle
+  const centerX = width / 2
+  const centerY = height / 2
+  const radius = Math.min(width - 2 * margin, height - 2 * margin) / 3
+
+  const positions: {x: number, y: number, vx: number, vy: number}[] = []
+  for (let i = 0; i < n; i++) {
+    const angle = (i / n) * 2 * Math.PI
+    positions.push({
+      x: centerX + radius * Math.cos(angle),
+      y: centerY + radius * Math.sin(angle),
+      vx: 0,
+      vy: 0
+    })
+  }
+
+  // Force constants
+  const k_spring = 0.005  // Spring strength for connected nodes
+  const k_repel = 2000    // Repulsion strength
+  const k_center = 0.008  // Centering force
+  const damping = 0.85    // Velocity damping
+
+  // Run simulation
+  const iterations = 300
+  for (let iter = 0; iter < iterations; iter++) {
+    const forces: {x: number, y: number}[] = Array(n).fill(null).map(() => ({x: 0, y: 0}))
+
+    // Attractive forces (springs between connected states)
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        if (i === j) continue
+        const weight = Math.abs(A[i][j])
+        if (weight < 0.001) continue // No connection
+
+        const dx = positions[j].x - positions[i].x
+        const dy = positions[j].y - positions[i].y
+        const dist = Math.sqrt(dx * dx + dy * dy)
+        if (dist < 0.1) continue
+
+        // Spring force proportional to connection weight
+        const force = k_spring * weight * dist
+        forces[i].x += force * dx / dist
+        forces[i].y += force * dy / dist
+      }
+    }
+
+    // Repulsive forces (prevent overlap)
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 1; j < n; j++) {
+        const dx = positions[j].x - positions[i].x
+        const dy = positions[j].y - positions[i].y
+        const dist = Math.sqrt(dx * dx + dy * dy)
+        if (dist < 0.1) continue
+
+        const force = k_repel / (dist * dist)
+        forces[i].x -= force * dx / dist
+        forces[i].y -= force * dy / dist
+        forces[j].x += force * dx / dist
+        forces[j].y += force * dy / dist
+      }
+    }
+
+    // Centering force
+    for (let i = 0; i < n; i++) {
+      forces[i].x += k_center * (centerX - positions[i].x)
+      forces[i].y += k_center * (centerY - positions[i].y)
+    }
+
+    // Update positions
+    for (let i = 0; i < n; i++) {
+      positions[i].vx = (positions[i].vx + forces[i].x) * damping
+      positions[i].vy = (positions[i].vy + forces[i].y) * damping
+
+      positions[i].x += positions[i].vx
+      positions[i].y += positions[i].vy
+
+      // Keep in bounds
+      positions[i].x = Math.max(margin + 60, Math.min(width - margin - 60, positions[i].x))
+      positions[i].y = Math.max(margin + 60, Math.min(height - margin - 60, positions[i].y))
+    }
+  }
+
+  return positions.map(p => ({x: p.x, y: p.y}))
+}
+
+// Create neural network layout
+function createNeuralNetworkLayout(
+  data: SystemModelData,
+  _sim: SimulationResult,
+  width: number,
+  height: number
+): { nodes: Node[], edges: Edge[] } {
+  const { A, B, C, labels } = data
+
+  const n = A.length // States
+  const m = B[0]?.length ?? 0 // Inputs
+  const p = C.length // Outputs
+
+  const nodes: Node[] = []
+  const margin = 80
+  const availableHeight = height - 2 * margin
+
+  // Input nodes (left column)
+  const inputX = margin
+  const inputSpacing = m > 1 ? availableHeight / (m + 1) : availableHeight / 2
+  for (let i = 0; i < m; i++) {
+    nodes.push({
+      id: `input_${i}`,
+      type: 'input',
+      index: i,
+      label: labels?.inputs?.[i] || `u${i + 1}`,
+      x: inputX,
+      y: margin + inputSpacing * (i + 1),
+      value: 0
+    })
+  }
+
+  // State nodes (force-directed layout based on A matrix)
+  const statePositions = forceDirectedStateLayout(A, width, height, margin)
+  for (let i = 0; i < n; i++) {
+    nodes.push({
+      id: `state_${i}`,
+      type: 'state',
+      index: i,
+      label: labels?.states?.[i] || `x${i + 1}`,
+      x: statePositions[i].x,
+      y: statePositions[i].y,
+      value: 0
+    })
+  }
+
+  // Output nodes (right column)
+  const outputX = width - margin
+  const outputSpacing = p > 1 ? availableHeight / (p + 1) : availableHeight / 2
+  for (let i = 0; i < p; i++) {
+    nodes.push({
+      id: `output_${i}`,
+      type: 'output',
+      index: i,
+      label: labels?.outputs?.[i] || `y${i + 1}`,
+      x: outputX,
+      y: margin + outputSpacing * (i + 1),
+      value: 0
+    })
+  }
+
+  // Create edges
+  const edges: Edge[] = []
+
+  // Input to state edges (B matrix)
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < m; j++) {
+      if (Math.abs(B[i][j]) > 0.001) { // Only show non-zero connections
+        const fromNode = nodes.find(n => n.id === `input_${j}`)!
+        const toNode = nodes.find(n => n.id === `state_${i}`)!
+        edges.push({
+          from: fromNode,
+          to: toNode,
+          weight: B[i][j],
+          flowRate: 0,
+          bidirectional: false,
+          parallelOffset: 0
+        })
+      }
+    }
+  }
+
+  // State to state edges (A matrix)
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      if (Math.abs(A[i][j]) > 0.001) {
+        const fromNode = nodes.find(n => n.id === `state_${j}`)!
+        const toNode = nodes.find(n => n.id === `state_${i}`)!
+        edges.push({
+          from: fromNode,
+          to: toNode,
+          weight: A[i][j],
+          flowRate: 0,
+          bidirectional: false,
+          parallelOffset: 0
+        })
+      }
+    }
+  }
+
+  // State to output edges (C matrix)
+  for (let i = 0; i < p; i++) {
+    for (let j = 0; j < n; j++) {
+      if (Math.abs(C[i][j]) > 0.001) {
+        const fromNode = nodes.find(n => n.id === `state_${j}`)!
+        const toNode = nodes.find(n => n.id === `output_${i}`)!
+        edges.push({
+          from: fromNode,
+          to: toNode,
+          weight: C[i][j],
+          flowRate: 0,
+          bidirectional: false,
+          parallelOffset: 0
+        })
+      }
+    }
+  }
+
+  // Detect bidirectional edges using adjacency map approach
+  // Build a map: "fromId->toId" => edge
+  const edgeMap = new Map<string, Edge>()
+  edges.forEach(edge => {
+    const key = `${edge.from.id}->${edge.to.id}`
+    edgeMap.set(key, edge)
+  })
+
+  // Check for bidirectional pairs and mark them for parallel rendering
+  edges.forEach(edge => {
+    // Skip self-loops (they can't be bidirectional)
+    if (edge.from.id === edge.to.id) return
+
+    const reverseKey = `${edge.to.id}->${edge.from.id}`
+    const reverseEdge = edgeMap.get(reverseKey)
+
+    if (reverseEdge && !edge.bidirectional) {
+      // Found bidirectional pair! Mark both edges
+      console.log(`Bidirectional edge detected: ${edge.from.id} ↔ ${edge.to.id}`)
+
+      edge.bidirectional = true
+      edge.parallelOffset = BIDIRECTIONAL_OFFSET
+
+      reverseEdge.bidirectional = true
+      reverseEdge.parallelOffset = -BIDIRECTIONAL_OFFSET
+    }
+  })
+
+  const bidirCount = edges.filter(e => e.bidirectional).length
+  console.log(`Layout created: ${edges.length} edges, ${bidirCount} bidirectional (${bidirCount/2} pairs)`)
+
+  return { nodes, edges }
+}

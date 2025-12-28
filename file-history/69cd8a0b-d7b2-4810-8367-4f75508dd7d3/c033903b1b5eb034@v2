@@ -1,0 +1,555 @@
+/**
+ * PIXI.js Renderer for ABM
+ *
+ * Handles WebGL-based rendering of:
+ * - Agents (circles, shapes, icons)
+ * - Environment (grid, zones, obstacles)
+ * - Trails
+ * - Selection/highlighting
+ */
+
+import type {
+  Entity,
+  EntityId,
+  Vector2D,
+  VisualConfig,
+  EnvironmentConfig,
+  ZoneDefinition,
+  ObstacleDefinition
+} from '../types'
+import { Entity as EntityClass } from '../core/ecs'
+
+// PIXI.js types - we'll dynamically import PIXI
+type Application = any
+type Container = any
+type Graphics = any
+type Text = any
+type Sprite = any
+
+// =============================================================================
+// COLOR UTILITIES
+// =============================================================================
+
+function hexToNumber(hex: string): number {
+  // Remove # if present
+  const cleaned = hex.replace('#', '')
+  return parseInt(cleaned, 16)
+}
+
+function interpolateColor(color1: string, color2: string, t: number): number {
+  const c1 = hexToNumber(color1)
+  const c2 = hexToNumber(color2)
+
+  const r1 = (c1 >> 16) & 0xff
+  const g1 = (c1 >> 8) & 0xff
+  const b1 = c1 & 0xff
+
+  const r2 = (c2 >> 16) & 0xff
+  const g2 = (c2 >> 8) & 0xff
+  const b2 = c2 & 0xff
+
+  const r = Math.round(r1 + (r2 - r1) * t)
+  const g = Math.round(g1 + (g2 - g1) * t)
+  const b = Math.round(b1 + (b2 - b1) * t)
+
+  return (r << 16) | (g << 8) | b
+}
+
+// Default color palette for agent groups
+const DEFAULT_COLORS = [
+  0x4285f4, // Blue
+  0xea4335, // Red
+  0xfbbc04, // Yellow
+  0x34a853, // Green
+  0xff6d01, // Orange
+  0x46bdc6, // Teal
+  0x7b1fa2, // Purple
+  0x795548, // Brown
+]
+
+// =============================================================================
+// RENDERER CONFIG
+// =============================================================================
+
+export interface RendererConfig {
+  width: number
+  height: number
+  backgroundColor?: string
+  showGrid?: boolean
+  showZones?: boolean
+  showTrails?: boolean
+  trailLength?: number
+  gridOpacity?: number
+}
+
+// =============================================================================
+// PIXI RENDERER
+// =============================================================================
+
+export class ABMRenderer {
+  private app: Application | null = null
+  private container: HTMLElement | null = null
+  private agentContainer: Container | null = null
+  private environmentContainer: Container | null = null
+  private trailContainer: Container | null = null
+  private uiContainer: Container | null = null
+
+  private agentGraphics: Map<EntityId, Graphics> = new Map()
+  private trailPoints: Map<EntityId, Vector2D[]> = new Map()
+  private trackedEntityId: EntityId | null = null
+
+  private config: RendererConfig
+  private environmentConfig: EnvironmentConfig | null = null
+  private archetypeColors: Map<string, number> = new Map()
+  private archetypeVisuals: Map<string, VisualConfig> = new Map()
+
+  private PIXI: any = null
+  private initialized: boolean = false
+
+  constructor(config: RendererConfig) {
+    this.config = {
+      backgroundColor: '#1a1a2e',
+      showGrid: true,
+      showZones: true,
+      showTrails: false,
+      trailLength: 50,
+      gridOpacity: 0.3,
+      ...config
+    }
+  }
+
+  /**
+   * Initialize PIXI and create the renderer
+   */
+  async initialize(container: HTMLElement): Promise<void> {
+    if (this.initialized) return
+
+    // Dynamically import PIXI
+    this.PIXI = await import('pixi.js')
+
+    this.container = container
+
+    // Clear any existing canvas elements from the container (safety check)
+    const existingCanvases = container.querySelectorAll('canvas')
+    existingCanvases.forEach(canvas => canvas.remove())
+
+    // Create PIXI application
+    this.app = new this.PIXI.Application()
+
+    await this.app.init({
+      width: this.config.width,
+      height: this.config.height,
+      backgroundColor: hexToNumber(this.config.backgroundColor || '#1a1a2e'),
+      antialias: true,
+      resolution: window.devicePixelRatio || 1,
+      autoDensity: true,
+    })
+
+    // Add canvas to container
+    container.appendChild(this.app.canvas)
+
+    // Create layer containers
+    this.environmentContainer = new this.PIXI.Container()
+    this.trailContainer = new this.PIXI.Container()
+    this.agentContainer = new this.PIXI.Container()
+    this.uiContainer = new this.PIXI.Container()
+
+    this.app.stage.addChild(this.environmentContainer)
+    this.app.stage.addChild(this.trailContainer)
+    this.app.stage.addChild(this.agentContainer)
+    this.app.stage.addChild(this.uiContainer)
+
+    this.initialized = true
+  }
+
+  /**
+   * Set up environment rendering (grid, zones, obstacles)
+   */
+  setupEnvironment(config: EnvironmentConfig, zones?: ZoneDefinition[], obstacles?: ObstacleDefinition[]): void {
+    if (!this.environmentContainer || !this.PIXI) return
+
+    this.environmentConfig = config
+    this.environmentContainer.removeChildren()
+
+    const graphics = new this.PIXI.Graphics()
+
+    // Draw grid
+    if (this.config.showGrid && config.spatial.type === 'grid2D') {
+      const cellSize = config.spatial.cellSize || 1
+      graphics.setStrokeStyle({
+        width: 1,
+        color: 0xffffff,
+        alpha: this.config.gridOpacity
+      })
+
+      // Vertical lines
+      for (let x = 0; x <= config.spatial.width; x += cellSize) {
+        graphics.moveTo(x, 0)
+        graphics.lineTo(x, config.spatial.height)
+      }
+
+      // Horizontal lines
+      for (let y = 0; y <= config.spatial.height; y += cellSize) {
+        graphics.moveTo(0, y)
+        graphics.lineTo(config.spatial.width, y)
+      }
+
+      graphics.stroke()
+    }
+
+    // Draw zones
+    if (this.config.showZones && zones) {
+      for (const zone of zones) {
+        graphics.setStrokeStyle({ width: 2, color: 0x4a90d9, alpha: 0.5 })
+        graphics.fill({ color: 0x4a90d9, alpha: 0.1 })
+
+        if (zone.shape === 'rectangle') {
+          const size = zone.size as Vector2D
+          graphics.rect(
+            zone.position.x - size.x / 2,
+            zone.position.y - size.y / 2,
+            size.x,
+            size.y
+          )
+        } else if (zone.shape === 'circle') {
+          const radius = zone.size as number
+          graphics.circle(zone.position.x, zone.position.y, radius)
+        }
+
+        graphics.fill()
+        graphics.stroke()
+      }
+    }
+
+    // Draw obstacles
+    if (obstacles) {
+      for (const obstacle of obstacles) {
+        graphics.fill({ color: 0x444444, alpha: 0.8 })
+
+        if (obstacle.shape === 'rectangle') {
+          const size = obstacle.size as Vector2D
+          graphics.rect(
+            obstacle.position.x - size.x / 2,
+            obstacle.position.y - size.y / 2,
+            size.x,
+            size.y
+          )
+        } else if (obstacle.shape === 'circle') {
+          const radius = obstacle.size as number
+          graphics.circle(obstacle.position.x, obstacle.position.y, radius)
+        }
+
+        graphics.fill()
+      }
+    }
+
+    this.environmentContainer.addChild(graphics)
+  }
+
+  /**
+   * Set archetype visual configurations
+   */
+  setArchetypeVisuals(visuals: Map<string, VisualConfig>): void {
+    this.archetypeVisuals = visuals
+
+    // Assign colors to archetypes that don't have one
+    let colorIndex = 0
+    for (const [archetype, visual] of visuals) {
+      if (visual.color) {
+        this.archetypeColors.set(archetype, hexToNumber(visual.color))
+      } else {
+        this.archetypeColors.set(archetype, DEFAULT_COLORS[colorIndex % DEFAULT_COLORS.length])
+        colorIndex++
+      }
+    }
+  }
+
+  /**
+   * Render all entities
+   */
+  render(entities: Entity[]): void {
+    if (!this.agentContainer || !this.PIXI) return
+
+    const currentIds = new Set<EntityId>()
+
+    for (const entity of entities) {
+      const entityObj = entity as EntityClass
+      const position = entityObj.getComponent<Vector2D>('Position')
+      if (!position) continue
+
+      currentIds.add(entityObj.id)
+
+      // Get or create graphics for this entity
+      let graphics = this.agentGraphics.get(entityObj.id)
+      if (!graphics) {
+        graphics = new this.PIXI.Graphics()
+        graphics.eventMode = 'static'
+        graphics.cursor = 'pointer'
+        this.agentContainer.addChild(graphics)
+        this.agentGraphics.set(entityObj.id, graphics)
+      }
+
+      // Get visual config
+      const visual = this.archetypeVisuals.get(entityObj.archetype) || {}
+      const size = visual.size || 5
+      let color = this.archetypeColors.get(entityObj.archetype) || DEFAULT_COLORS[0]
+
+      // Color by state if configured
+      if (visual.colorByState) {
+        const value = entityObj.getProperty(visual.colorByState.property)
+        if (typeof value === 'number') {
+          // Normalize value (assuming 0-100 range, adjust as needed)
+          const t = Math.max(0, Math.min(1, value / 100))
+          color = interpolateColor(visual.colorByState.minColor, visual.colorByState.maxColor, t)
+        }
+      }
+
+      // Clear and redraw
+      graphics.clear()
+
+      // Draw shape
+      const shape = visual.shape || 'circle'
+      const isTracked = entityObj.id === this.trackedEntityId
+
+      graphics.fill({ color, alpha: 1 })
+
+      if (isTracked) {
+        graphics.setStrokeStyle({ width: 2, color: 0xffffff })
+      }
+
+      switch (shape) {
+        case 'circle':
+          graphics.circle(0, 0, size)
+          break
+        case 'square':
+          graphics.rect(-size, -size, size * 2, size * 2)
+          break
+        case 'triangle':
+          graphics.moveTo(0, -size)
+          graphics.lineTo(size, size)
+          graphics.lineTo(-size, size)
+          graphics.closePath()
+          break
+        case 'diamond':
+          graphics.moveTo(0, -size)
+          graphics.lineTo(size, 0)
+          graphics.lineTo(0, size)
+          graphics.lineTo(-size, 0)
+          graphics.closePath()
+          break
+      }
+
+      graphics.fill()
+      if (isTracked) {
+        graphics.stroke()
+      }
+
+      // Update position
+      graphics.x = position.x
+      graphics.y = position.y
+
+      // Update trails
+      if (this.config.showTrails) {
+        this.updateTrail(entityObj.id, position)
+      }
+    }
+
+    // Remove graphics for entities that no longer exist
+    for (const [entityId, graphics] of this.agentGraphics) {
+      if (!currentIds.has(entityId)) {
+        this.agentContainer.removeChild(graphics)
+        graphics.destroy()
+        this.agentGraphics.delete(entityId)
+        this.trailPoints.delete(entityId)
+      }
+    }
+
+    // Render trails
+    if (this.config.showTrails) {
+      this.renderTrails()
+    }
+  }
+
+  /**
+   * Update trail for an entity
+   */
+  private updateTrail(entityId: EntityId, position: Vector2D): void {
+    let trail = this.trailPoints.get(entityId)
+    if (!trail) {
+      trail = []
+      this.trailPoints.set(entityId, trail)
+    }
+
+    trail.push({ ...position })
+
+    // Limit trail length
+    const maxLength = this.config.trailLength || 50
+    while (trail.length > maxLength) {
+      trail.shift()
+    }
+  }
+
+  /**
+   * Render all trails
+   */
+  private renderTrails(): void {
+    if (!this.trailContainer || !this.PIXI) return
+
+    this.trailContainer.removeChildren()
+
+    const graphics = new this.PIXI.Graphics()
+
+    for (const [entityId, trail] of this.trailPoints) {
+      if (trail.length < 2) continue
+
+      const color = this.archetypeColors.get(
+        this.agentGraphics.get(entityId)?.archetype || ''
+      ) || 0xffffff
+
+      for (let i = 1; i < trail.length; i++) {
+        const alpha = i / trail.length * 0.5
+        graphics.setStrokeStyle({ width: 1, color, alpha })
+        graphics.moveTo(trail[i - 1].x, trail[i - 1].y)
+        graphics.lineTo(trail[i].x, trail[i].y)
+        graphics.stroke()
+      }
+    }
+
+    this.trailContainer.addChild(graphics)
+  }
+
+  /**
+   * Handle click on entity
+   */
+  onEntityClick(callback: (entityId: EntityId) => void): void {
+    for (const [entityId, graphics] of this.agentGraphics) {
+      graphics.on('pointertap', () => callback(entityId))
+    }
+  }
+
+  /**
+   * Set tracked entity (highlighted)
+   */
+  setTrackedEntity(entityId: EntityId | null): void {
+    this.trackedEntityId = entityId
+  }
+
+  /**
+   * Update renderer configuration
+   */
+  updateConfig(config: Partial<RendererConfig>): void {
+    this.config = { ...this.config, ...config }
+
+    if (!config.showTrails) {
+      this.trailPoints.clear()
+      this.trailContainer?.removeChildren()
+    }
+  }
+
+  /**
+   * Resize the renderer
+   */
+  resize(width: number, height: number): void {
+    if (!this.app) return
+
+    this.config.width = width
+    this.config.height = height
+    this.app.renderer.resize(width, height)
+  }
+
+  /**
+   * Get entity at screen position
+   */
+  getEntityAtPosition(x: number, y: number): EntityId | null {
+    for (const [entityId, graphics] of this.agentGraphics) {
+      const bounds = graphics.getBounds()
+      if (x >= bounds.x && x <= bounds.x + bounds.width &&
+          y >= bounds.y && y <= bounds.y + bounds.height) {
+        return entityId
+      }
+    }
+    return null
+  }
+
+  /**
+   * Clear all trails
+   */
+  clearTrails(): void {
+    this.trailPoints.clear()
+    this.trailContainer?.removeChildren()
+  }
+
+  /**
+   * Destroy the renderer
+   */
+  destroy(): void {
+    if (this.app) {
+      // Remove the canvas from the DOM before destroying
+      if (this.app.canvas && this.app.canvas.parentNode) {
+        this.app.canvas.parentNode.removeChild(this.app.canvas)
+      }
+      this.app.destroy(true, { children: true, texture: true })
+      this.app = null
+    }
+
+    // Clear containers
+    this.agentContainer = null
+    this.environmentContainer = null
+    this.trailContainer = null
+    this.uiContainer = null
+    this.container = null
+
+    this.agentGraphics.clear()
+    this.trailPoints.clear()
+    this.archetypeColors.clear()
+    this.archetypeVisuals.clear()
+    this.initialized = false
+  }
+
+  /**
+   * Get PIXI application (for external access)
+   */
+  getApp(): Application | null {
+    return this.app
+  }
+
+  /**
+   * Check if renderer is initialized
+   */
+  isInitialized(): boolean {
+    return this.initialized
+  }
+}
+
+// =============================================================================
+// LEGEND RENDERER
+// =============================================================================
+
+export interface LegendItem {
+  label: string
+  color: number
+  shape?: 'circle' | 'square' | 'triangle' | 'diamond'
+}
+
+export function createLegend(items: LegendItem[]): HTMLElement {
+  const container = document.createElement('div')
+  container.className = 'absolute top-2 right-2 bg-black/70 rounded-lg p-3 text-white text-sm'
+
+  for (const item of items) {
+    const row = document.createElement('div')
+    row.className = 'flex items-center gap-2 mb-1 last:mb-0'
+
+    const colorBox = document.createElement('div')
+    colorBox.className = 'w-4 h-4 rounded-sm'
+    colorBox.style.backgroundColor = '#' + item.color.toString(16).padStart(6, '0')
+
+    const label = document.createElement('span')
+    label.textContent = item.label
+
+    row.appendChild(colorBox)
+    row.appendChild(label)
+    container.appendChild(row)
+  }
+
+  return container
+}

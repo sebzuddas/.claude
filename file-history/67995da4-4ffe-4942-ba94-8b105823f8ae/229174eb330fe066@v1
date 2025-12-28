@@ -1,0 +1,156 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import VisualizationLayout from '@/components/ui/VisualizationLayout'
+import HeatMap from '@/components/visualizations/HeatMap'
+import ColorPaletteSelector from '@/components/ui/ColorPaletteSelector'
+import FileUploadZone from '@/components/ui/FileUploadZone'
+import MessageDisplay from '@/components/ui/MessageDisplay'
+import CodeBlock from '@/components/ui/CodeBlock'
+import { DataParser } from '@/lib/utils'
+import type { HeatMapData, FileUploadResult } from '@/types'
+
+export default function HeatMapPage() {
+  const [data, setData] = useState<HeatMapData | null>(null)
+  const [colorPalette, setColorPalette] = useState('viridis')
+  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' }>()
+
+  useEffect(() => {
+    // Initialize with data from URL or demo data
+    const urlData = DataParser.parseURLParams()
+    
+    if (urlData.error) {
+      setMessage({ text: urlData.error, type: 'error' })
+      return
+    }
+    
+    if (urlData.demo || (!urlData.data)) {
+      generateDemoData()
+      setMessage({ text: 'Demo data loaded. Upload your own JSON file or use URL parameters.', type: 'success' })
+    } else {
+      setHeatMapData(urlData.data)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const generateDemoData = () => {
+    const rows = 10
+    const cols = 8
+    const demoData: number[][] = []
+    
+    for (let i = 0; i < rows; i++) {
+      const row: number[] = []
+      for (let j = 0; j < cols; j++) {
+        // Create some interesting patterns
+        const value = Math.sin(i * 0.3) * Math.cos(j * 0.4) * 50 + 
+                     Math.random() * 30 + 25
+        row.push(Math.round(value * 10) / 10)
+      }
+      demoData.push(row)
+    }
+    
+    setHeatMapData({
+      data: demoData,
+      title: 'Demo Heat Map',
+      labels: {
+        x: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'],
+        y: ['Row 1', 'Row 2', 'Row 3', 'Row 4', 'Row 5', 'Row 6', 'Row 7', 'Row 8', 'Row 9', 'Row 10']
+      }
+    })
+  }
+
+  const setHeatMapData = (newData: any) => {
+    // Validate data
+    if (!newData?.data || !Array.isArray(newData.data)) {
+      setMessage({ text: 'Invalid data: missing required "data" field', type: 'error' })
+      return
+    }
+
+    setData(newData)
+    setMessage({ text: 'Heat map data loaded successfully!', type: 'success' })
+  }
+
+  const handleFileUpload = (result: FileUploadResult) => {
+    if (result.error) {
+      setMessage({ text: result.error, type: 'error' })
+    } else if (result.data) {
+      setHeatMapData(result.data)
+    }
+  }
+
+  const handleExport = () => {
+    // This would need to be implemented in the P5 component
+    setMessage({ text: 'Export functionality coming soon!', type: 'info' })
+  }
+
+  return (
+    <VisualizationLayout
+      title="Heat Map Visualization"
+      description="Visualize 2D data matrices with color-coded intensity"
+    >
+      {/* Controls */}
+      <div className="controls">
+        <ColorPaletteSelector
+          value={colorPalette}
+          onChange={setColorPalette}
+          className="mr-4"
+        />
+        <button
+          onClick={generateDemoData}
+          className="btn mr-2"
+        >
+          Regenerate Demo Data
+        </button>
+        <button
+          onClick={handleExport}
+          className="btn"
+        >
+          Export as Image
+        </button>
+      </div>
+
+      {/* File Upload */}
+      <FileUploadZone
+        onFileUpload={handleFileUpload}
+        description="Drop a JSON file here or click to select"
+        className="w-full max-w-2xl"
+      />
+
+      {/* Message Display */}
+      {message && (
+        <MessageDisplay
+          message={message.text}
+          type={message.type}
+          onClose={() => setMessage(undefined)}
+        />
+      )}
+
+      {/* Visualization */}
+      {data && (
+        <div className="bg-white rounded-lg shadow-lg p-4">
+          <HeatMap
+            data={data}
+            colorPalette={colorPalette}
+            onError={(error) => setMessage({ text: error, type: 'error' })}
+          />
+        </div>
+      )}
+
+      {/* Usage Instructions */}
+      <div className="mt-8 max-w-full">
+        <h3 className="text-lg font-semibold mb-4">Expected JSON Format:</h3>
+        <pre className="bg-gray-100 p-4 rounded text-sm overflow-x-auto">
+        {JSON.stringify({
+          "data": [[1, 2, 3], [4, 5, 6], [7, 8, 9]],
+          "labels": {
+            "x": ["A", "B", "C"],
+            "y": ["X", "Y", "Z"]
+          },
+          "colorScale": "viridis",
+          "title": "Sample Heat Map"
+        }, null, 2)}
+        </pre>
+      </div>
+    </VisualizationLayout>
+  )
+}

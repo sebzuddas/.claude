@@ -1,0 +1,31 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/lib/abm/core/simulation.ts has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   586→        for (const entity of applicableEntities) {
+   587→          const effects = this.evaluateRuleForEntity(rule, entity as EntityClass, dt)
+   588→          if (effects) allEffects.push(effects)
+   589→        }
+   590→      } else if ('onProximity' in rule.trigger) {
+   591→        const proximityTrigger = rule.trigger.onProximity
+   592→        const radius = proximityTrigger.radius
+   593→        for (const entity of applicableEntities) {
+   594→          const entityObj = entity as EntityClass
+   595→          const position = entityObj.getComponent<Vector2D>('Position')
+   596→          if (!position) continue
+   597→
+   598→          const neighbors = SpatialPrimitives.withinRadius(
+   599→            this.world,
+   600→            position,
+   601→            radius,
+   602→            e => e.id !== entityObj.id
+   603→          )
+   604→
+   605→          // Apply filter if specified
+   606→          let filtered = neighbors
+   607→          if (proximityTrigger.filter) {
+   608→            filtered = neighbors.filter(n =>
+   609→              this.evaluateConditionForEntity(proximityTrigger.filter!, entityObj, n as EntityClass)
+   610→            )
+   611→          }
+   612→
+   613→          for (const other of filtered) {
+   614→            const effects = this.evaluateRuleForEntity(rule, entityObj, dt, other as EntityClass)
+   615→            if (effects) allEffects.push(effects)

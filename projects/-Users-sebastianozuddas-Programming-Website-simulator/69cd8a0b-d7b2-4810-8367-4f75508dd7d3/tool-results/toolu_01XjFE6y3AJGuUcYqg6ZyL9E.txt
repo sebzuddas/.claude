@@ -1,0 +1,19 @@
+    15→export type ComponentType = string
+    16→
+    17→/** Property path for accessing nested values (e.g., "self.Health.value") */
+    18→export type PropertyPath = string
+    19→
+    20→// =============================================================================
+    21→// DATA TYPES FOR COMPONENT PROPERTIES
+    22→// =============================================================================
+    23→
+    24→export type ABMDataType =
+    25→  | 'number'
+    26→  | 'string'
+    27→  | 'boolean'
+    28→  | 'enum'
+    29→  | 'vector2D'
+
+<system-reminder>
+Whenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.
+</system-reminder>

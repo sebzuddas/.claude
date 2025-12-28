@@ -1,0 +1,47 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/components/visualizations/SystemModel.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   654→      }
+   655→    }
+   656→  }
+   657→
+   658→  // State to output edges (C matrix)
+   659→  for (let i = 0; i < p; i++) {
+   660→    for (let j = 0; j < n; j++) {
+   661→      if (Math.abs(C[i][j]) > 0.001) {
+   662→        const fromNode = nodes.find(n => n.id === `state_${j}`)!
+   663→        const toNode = nodes.find(n => n.id === `output_${i}`)!
+   664→        edges.push({
+   665→          from: fromNode,
+   666→          to: toNode,
+   667→          weight: C[i][j],
+   668→          flowRate: 0,
+   669→          curved: false,
+   670→          curveOffset: 0
+   671→        })
+   672→      }
+   673→    }
+   674→  }
+   675→
+   676→  // Detect bidirectional edges and mark them as curved
+   677→  const curveAmount = 40 // Pixels to offset curve
+   678→  for (let i = 0; i < edges.length; i++) {
+   679→    const edge1 = edges[i]
+   680→
+   681→    // Look for reverse edge
+   682→    for (let j = i + 1; j < edges.length; j++) {
+   683→      const edge2 = edges[j]
+   684→
+   685→      // Check if edge2 goes in the opposite direction
+   686→      if (edge1.from.id === edge2.to.id && edge1.to.id === edge2.from.id) {
+   687→        // Bidirectional edges found! Curve them
+   688→        edge1.curved = true
+   689→        edge1.curveOffset = curveAmount
+   690→        edge2.curved = true
+   691→        edge2.curveOffset = -curveAmount // Opposite direction
+   692→        break
+   693→      }
+   694→    }
+   695→  }
+   696→
+   697→  return { nodes, edges }
+   698→}
+   699→

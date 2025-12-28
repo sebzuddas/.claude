@@ -1,0 +1,37 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/components/visualizations/SystemModel.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   825→      <div ref={canvasRef} />
+   826→
+   827→      {/* Playback Controls */}
+   828→      <div ref={controlsRef} className="mt-4 p-4 bg-gray-100 rounded-lg">
+   829→        {/* Export Controls */}
+   830→        <div className="flex items-center justify-center gap-2 mb-4 pb-3 border-b border-gray-300">
+   831→          {hasSimulationData && (
+   832→            <>
+   833→              <button
+   834→                onClick={openInStateSpaceVisualizer}
+   835→                className="px-4 py-2 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded hover:from-pink-600 hover:to-purple-600 transition-colors text-sm font-semibold shadow-md"
+   836→                title="Open this simulation in the State Space Visualizer"
+   837→              >
+   838→                🎨 View Phase Portrait
+   839→              </button>
+   840→              <button
+   841→                onClick={openInVectorField}
+   842→                className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded hover:from-blue-600 hover:to-cyan-600 transition-colors text-sm font-semibold shadow-md"
+   843→                title="Open this system in the Vector Field Visualizer"
+   844→              >
+   845→                🧭 View Vector Field
+   846→              </button>
+   847→            </>
+   848→          )}
+   849→          <button
+   850→            onClick={exportToCSV}
+   851→            className="px-3 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors text-sm"
+   852→            disabled={!hasSimulationData}
+   853→            title="Export time series data as CSV"
+   854→          >
+   855→            📊 Export CSV
+   856→          </button>
+   857→          <button
+   858→            onClick={exportToJSON}
+   859→            className="px-3 py-1 bg-indigo-500 text-white rounded hover:bg-indigo-600 transition-colors text-sm"
+   860→            disabled={!hasSimulationData}

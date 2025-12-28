@@ -1,0 +1,54 @@
+  1390→6. There shall be no zoom or pan controls. The window shall show the full simulation. 
+  1391→7. Colouring shall be defined as follows:
+  1392→   1. By default, colouring shall be defined by the agent type. 
+  1393→   2. The inputted json shall be able to define if the colouring should be determined by a particular agent state. The agent states shall contain a maximum and minimum range, as defined in the ODD. Therefore, the user shall be able to define two colours, representing the maximum and minimum range of the state. 
+  1394→8. The environment
+  1395→9. Real-time graphs
+  1396→   1. The user shall be able to view two timeseries plots in two vertical windows below the simulation. 
+  1397→   2. The first timeseries plot shall focus on the large-scale simulation, and should have tickboxes which determine which states to visualise. 
+  1398→   3. The second timeseries plot shall focus on the individual agents. 
+  1399→      1. The second plot shall have two dropdowns
+  1400→         1. The first dropdown shall define which agent GROUP the user wishes to view the states for. 
+  1401→         2. The second dropdown shall define which INDIVIDUAL agent the user wishes to view the states for. 
+  1402→10. **Graph update frequency**: Time series plots shall update every N ticks (configurable, default 1).
+  1403→
+  1404→11. **Color interpolation**: When coloring by state value, interpolation shall be linear in RGB space by default.
+  1405→
+  1406→12. **Click-to-inspect**: When a user clicks an agent, a panel shall display:
+  1407→    1. Entity ID
+  1408→    2. Archetype name
+  1409→    3. All component data as key-value pairs
+  1410→    4. Option to "track" this agent (highlight it persistently)
+  1411→
+  1412→
+  1413→---
+  1414→
+  1415→### 8. Non-Visualized Performance Mode
+  1416→
+  1417→**Question**: How should the "fast mode" work? What optimizations are needed?
+  1418→
+  1419→**Considerations**:
+  1420→- Skip all rendering, run simulation logic only?
+  1421→- Use Web Workers to avoid blocking UI?
+  1422→- Batch processing: run N timesteps then update progress?
+  1423→- Output options: final state only vs periodic snapshots vs full timeseries?
+  1424→- Speed comparison target: how much faster should it be (10x? 100x?)?
+  1425→- Progress reporting: how to show user that simulation is running?
+  1426→- Memory management for long simulations?
+  1427→
+  1428→**Your Answer**:
+  1429→For now do not implement this, but consider that this may be a feature added later on when architecting the software. 
+  1430→
+  1431→Requirements:
+  1432→1. 
+  1433→
+  1434→---
+  1435→
+  1436→### 9. Data Output & Analytics
+  1437→
+  1438→**Question**: What data should be collected and exported? What analysis tools should be built-in?
+  1439→
+
+<system-reminder>
+Whenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.
+</system-reminder>

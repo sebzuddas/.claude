@@ -1,0 +1,160 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/components/visualizations/SystemModel.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   646→function dotProduct(a: number[], b: number[]): number {
+   647→  return a.reduce((sum, val, i) => sum + val * (b[i] ?? 0), 0)
+   648→}
+   649→
+   650→// Force-directed layout for state nodes based on A matrix structure
+   651→function forceDirectedStateLayout(A: number[][], width: number, height: number, margin: number): {x: number, y: number}[] {
+   652→  const n = A.length
+   653→  if (n === 0) return []
+   654→
+   655→  // Initialize positions in a circle
+   656→  const centerX = width / 2
+   657→  const centerY = height / 2
+   658→  const radius = Math.min(width - 2 * margin, height - 2 * margin) / 3
+   659→
+   660→  const positions: {x: number, y: number, vx: number, vy: number}[] = []
+   661→  for (let i = 0; i < n; i++) {
+   662→    const angle = (i / n) * 2 * Math.PI
+   663→    positions.push({
+   664→      x: centerX + radius * Math.cos(angle),
+   665→      y: centerY + radius * Math.sin(angle),
+   666→      vx: 0,
+   667→      vy: 0
+   668→    })
+   669→  }
+   670→
+   671→  // Force constants
+   672→  const k_spring = 0.005  // Spring strength for connected nodes
+   673→  const k_repel = 2000    // Repulsion strength
+   674→  const k_center = 0.008  // Centering force
+   675→  const damping = 0.85    // Velocity damping
+   676→  const minDist = 100     // Minimum distance between nodes
+   677→
+   678→  // Run simulation
+   679→  const iterations = 300
+   680→  for (let iter = 0; iter < iterations; iter++) {
+   681→    const forces: {x: number, y: number}[] = Array(n).fill(null).map(() => ({x: 0, y: 0}))
+   682→
+   683→    // Attractive forces (springs between connected states)
+   684→    for (let i = 0; i < n; i++) {
+   685→      for (let j = 0; j < n; j++) {
+   686→        if (i === j) continue
+   687→        const weight = Math.abs(A[i][j])
+   688→        if (weight < 0.001) continue // No connection
+   689→
+   690→        const dx = positions[j].x - positions[i].x
+   691→        const dy = positions[j].y - positions[i].y
+   692→        const dist = Math.sqrt(dx * dx + dy * dy)
+   693→        if (dist < 0.1) continue
+   694→
+   695→        // Spring force proportional to connection weight
+   696→        const force = k_spring * weight * dist
+   697→        forces[i].x += force * dx / dist
+   698→        forces[i].y += force * dy / dist
+   699→      }
+   700→    }
+   701→
+   702→    // Repulsive forces (prevent overlap)
+   703→    for (let i = 0; i < n; i++) {
+   704→      for (let j = i + 1; j < n; j++) {
+   705→        const dx = positions[j].x - positions[i].x
+   706→        const dy = positions[j].y - positions[i].y
+   707→        const dist = Math.sqrt(dx * dx + dy * dy)
+   708→        if (dist < 0.1) continue
+   709→
+   710→        const force = k_repel / (dist * dist)
+   711→        forces[i].x -= force * dx / dist
+   712→        forces[i].y -= force * dy / dist
+   713→        forces[j].x += force * dx / dist
+   714→        forces[j].y += force * dy / dist
+   715→      }
+   716→    }
+   717→
+   718→    // Centering force
+   719→    for (let i = 0; i < n; i++) {
+   720→      forces[i].x += k_center * (centerX - positions[i].x)
+   721→      forces[i].y += k_center * (centerY - positions[i].y)
+   722→    }
+   723→
+   724→    // Update positions
+   725→    for (let i = 0; i < n; i++) {
+   726→      positions[i].vx = (positions[i].vx + forces[i].x) * damping
+   727→      positions[i].vy = (positions[i].vy + forces[i].y) * damping
+   728→
+   729→      positions[i].x += positions[i].vx
+   730→      positions[i].y += positions[i].vy
+   731→
+   732→      // Keep in bounds
+   733→      positions[i].x = Math.max(margin + 60, Math.min(width - margin - 60, positions[i].x))
+   734→      positions[i].y = Math.max(margin + 60, Math.min(height - margin - 60, positions[i].y))
+   735→    }
+   736→  }
+   737→
+   738→  return positions.map(p => ({x: p.x, y: p.y}))
+   739→}
+   740→
+   741→// Create neural network layout
+   742→function createNeuralNetworkLayout(
+   743→  data: SystemModelData,
+   744→  sim: SimulationResult,
+   745→  width: number,
+   746→  height: number
+   747→): { nodes: Node[], edges: Edge[] } {
+   748→  const { A, B, C, labels } = data
+   749→
+   750→  const n = A.length // States
+   751→  const m = B[0]?.length ?? 0 // Inputs
+   752→  const p = C.length // Outputs
+   753→
+   754→  const nodes: Node[] = []
+   755→  const margin = 80
+   756→  const availableHeight = height - 2 * margin
+   757→
+   758→  // Input nodes (left column)
+   759→  const inputX = margin
+   760→  const inputSpacing = m > 1 ? availableHeight / (m + 1) : availableHeight / 2
+   761→  for (let i = 0; i < m; i++) {
+   762→    nodes.push({
+   763→      id: `input_${i}`,
+   764→      type: 'input',
+   765→      index: i,
+   766→      label: labels?.inputs?.[i] || `u${i + 1}`,
+   767→      x: inputX,
+   768→      y: margin + inputSpacing * (i + 1),
+   769→      value: 0
+   770→    })
+   771→  }
+   772→
+   773→  // State nodes (force-directed layout based on A matrix)
+   774→  const statePositions = forceDirectedStateLayout(A, width, height, margin)
+   775→  for (let i = 0; i < n; i++) {
+   776→    nodes.push({
+   777→      id: `state_${i}`,
+   778→      type: 'state',
+   779→      index: i,
+   780→      label: labels?.states?.[i] || `x${i + 1}`,
+   781→      x: statePositions[i].x,
+   782→      y: statePositions[i].y,
+   783→      value: 0
+   784→    })
+   785→  }
+   786→
+   787→  // Output nodes (right column)
+   788→  const outputX = width - margin
+   789→  const outputSpacing = p > 1 ? availableHeight / (p + 1) : availableHeight / 2
+   790→  for (let i = 0; i < p; i++) {
+   791→    nodes.push({
+   792→      id: `output_${i}`,
+   793→      type: 'output',
+   794→      index: i,
+   795→      label: labels?.outputs?.[i] || `y${i + 1}`,
+   796→      x: outputX,
+   797→      y: margin + outputSpacing * (i + 1),
+   798→      value: 0
+   799→    })
+   800→  }
+   801→
+   802→  // Create edges
+   803→  const edges: Edge[] = []
+   804→

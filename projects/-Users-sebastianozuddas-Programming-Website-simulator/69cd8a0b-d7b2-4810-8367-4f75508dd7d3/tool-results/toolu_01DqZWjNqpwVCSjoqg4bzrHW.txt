@@ -1,0 +1,1 @@
+361:  }, [data, width, height, currentTimeIndex, simulationError])

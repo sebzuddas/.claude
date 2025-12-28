@@ -1,0 +1,49 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/components/visualizations/SystemModel.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   754→      .then(() => alert('Current state copied to clipboard!'))
+   755→      .catch(err => console.error('Failed to copy:', err))
+   756→  }
+   757→
+   758→  const openInStateSpaceVisualizer = () => {
+   759→    if (!simulationRef.current || !data) {
+   760→      console.error('No simulation data available')
+   761→      return
+   762→    }
+   763→
+   764→    try {
+   765→      // Prepare data in StateSpaceData format
+   766→      const stateSpaceData = {
+   767→        t: simulationRef.current.t,
+   768→        x: simulationRef.current.x,
+   769→        labels: data.labels?.states,
+   770→        title: data.title || 'System Simulation'
+   771→      }
+   772→
+   773→      // Validate data before storing
+   774→      if (!stateSpaceData.t || !stateSpaceData.x || stateSpaceData.t.length === 0 || stateSpaceData.x.length === 0) {
+   775→        console.error('Invalid simulation data')
+   776→        return
+   777→      }
+   778→
+   779→      // Store in sessionStorage
+   780→      sessionStorage.setItem('stateSpaceData', JSON.stringify(stateSpaceData))
+   781→
+   782→      // Also store system matrix for potential vector field navigation
+   783→      if (data.A) {
+   784→        const systemData = {
+   785→          A: data.A,
+   786→          labels: data.labels?.states,
+   787→          title: data.title
+   788→        }
+   789→        sessionStorage.setItem('systemMatrix', JSON.stringify(systemData))
+   790→      }
+   791→
+   792→      // Navigate to state space visualizer
+   793→      router.push('/statespace')
+   794→    } catch (error) {
+   795→      console.error('Failed to open state space visualizer:', error)
+   796→    }
+   797→  }
+   798→
+   799→  const openInVectorField = () => {
+   800→    if (!data || !data.A) {
+   801→      console.error('No system matrix available')

@@ -1,0 +1,30 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/components/visualizations/SystemModel.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   236→              edge.flowRate = edge.weight * edge.from.value
+   237→            })
+   238→          }
+   239→
+   240→          function spawnParticles(edges: Edge[], pool: Particle[]) {
+   241→            edges.forEach(edge => {
+   242→              // Spawn particles based on flow magnitude
+   243→              const absFlow = Math.abs(edge.flowRate)
+   244→
+   245→              // Only spawn if flow is significant (> 0.01)
+   246→              if (absFlow < 0.01) return
+   247→
+   248→              // Scale particle count with flow: 0-10 particles based on flow rate
+   249→              const particleCount = Math.min(10, Math.max(1, Math.floor(absFlow * 5)))
+   250→
+   251→              for (let i = 0; i < particleCount; i++) {
+   252→                const available = pool.find(p => !p.active)
+   253→                if (available) {
+   254→                  available.edge = edge
+   255→                  available.progress = Math.random() * 0.2 // Stagger spawn
+   256→                  available.active = true
+   257→                }
+   258→              }
+   259→            })
+   260→          }
+   261→
+   262→          function updateParticles(pool: Particle[]) {
+   263→            pool.forEach(particle => {
+   264→              if (!particle.active) return

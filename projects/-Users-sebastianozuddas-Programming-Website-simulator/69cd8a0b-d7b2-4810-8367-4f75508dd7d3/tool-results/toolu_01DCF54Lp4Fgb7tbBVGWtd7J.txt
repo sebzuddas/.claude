@@ -1,0 +1,14 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/lib/abm/core/simulation.ts has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   321→    this.state.paused = true
+   322→    this.emit('stateChanged', this.getState())
+   323→  }
+   324→
+   325→  reset(): void {
+   326→    if (!this.world || !this.initialState) return
+   327→
+   328→    // Restore initial state
+   329→    this.world.deserialize(this.initialState as Parameters<typeof this.world.deserialize>[0])
+   330→
+   331→    // Reset simulation state
+   332→    this.state.tick = 0
+   333→    this.state.time = 0

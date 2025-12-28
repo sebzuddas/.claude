@@ -1,0 +1,73 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/components/visualizations/VectorField.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   743→            </div>
+   744→          </>
+   745→        )}
+   746→
+   747→        {data.dimension === 2 ? (
+   748→          <div className="mt-4 text-sm text-gray-600 text-center">
+   749→            Click on the vector field to add a trajectory (max 2)
+   750→          </div>
+   751→        ) : (
+   752→          <div className="mt-4 pb-3 border-t border-gray-300 pt-3">
+   753→            <h4 className="text-sm font-semibold mb-3 text-center">Add Trajectory (max 2)</h4>
+   754→            <div className="flex items-center justify-center gap-3 flex-wrap">
+   755→              <div className="flex items-center gap-2">
+   756→                <label className="text-sm font-medium">
+   757→                  {data.labels?.[data.selectedStates?.[0] || 0] || 'x'}:
+   758→                </label>
+   759→                <input
+   760→                  type="number"
+   761→                  step="0.1"
+   762→                  value={ic3DX}
+   763→                  onChange={(e) => setIc3DX(e.target.value)}
+   764→                  className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+   765→                  disabled={trajectories.length >= 2}
+   766→                />
+   767→              </div>
+   768→              <div className="flex items-center gap-2">
+   769→                <label className="text-sm font-medium">
+   770→                  {data.labels?.[data.selectedStates?.[1] || 1] || 'y'}:
+   771→                </label>
+   772→                <input
+   773→                  type="number"
+   774→                  step="0.1"
+   775→                  value={ic3DY}
+   776→                  onChange={(e) => setIc3DY(e.target.value)}
+   777→                  className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+   778→                  disabled={trajectories.length >= 2}
+   779→                />
+   780→              </div>
+   781→              <div className="flex items-center gap-2">
+   782→                <label className="text-sm font-medium">
+   783→                  {data.labels?.[data.selectedStates?.[2] || 2] || 'z'}:
+   784→                </label>
+   785→                <input
+   786→                  type="number"
+   787→                  step="0.1"
+   788→                  value={ic3DZ}
+   789→                  onChange={(e) => setIc3DZ(e.target.value)}
+   790→                  className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+   791→                  disabled={trajectories.length >= 2}
+   792→                />
+   793→              </div>
+   794→              <button
+   795→                onClick={handleAdd3DTrajectory}
+   796→                className="px-4 py-1 bg-green-500 text-white rounded hover:bg-green-600 transition-colors text-sm font-semibold"
+   797→                disabled={trajectories.length >= 2}
+   798→              >
+   799→                Add Trajectory
+   800→              </button>
+   801→            </div>
+   802→            {bounds && (
+   803→              <div className="mt-2 text-xs text-gray-500 text-center">
+   804→                Bounds: {data.labels?.[data.selectedStates?.[0] || 0] || 'x'} ∈ [{bounds.min[data.selectedStates?.[0] || 0].toFixed(1)}, {bounds.max[data.selectedStates?.[0] || 0].toFixed(1)}],
+   805→                {' '}{data.labels?.[data.selectedStates?.[1] || 1] || 'y'} ∈ [{bounds.min[data.selectedStates?.[1] || 1].toFixed(1)}, {bounds.max[data.selectedStates?.[1] || 1].toFixed(1)}],
+   806→                {' '}{data.labels?.[data.selectedStates?.[2] || 2] || 'z'} ∈ [{bounds.min[data.selectedStates?.[2] || 2].toFixed(1)}, {bounds.max[data.selectedStates?.[2] || 2].toFixed(1)}]
+   807→              </div>
+   808→            )}
+   809→          </div>
+   810→        )}
+   811→      </div>
+   812→    </div>
+   813→  )
+   814→}

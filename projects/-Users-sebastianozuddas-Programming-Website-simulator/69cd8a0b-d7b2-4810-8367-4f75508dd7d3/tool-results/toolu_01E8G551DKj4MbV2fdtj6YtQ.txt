@@ -1,0 +1,104 @@
+   557→function createNeuralNetworkLayout(
+   558→  data: SystemModelData,
+   559→  sim: SimulationResult,
+   560→  width: number,
+   561→  height: number
+   562→): { nodes: Node[], edges: Edge[] } {
+   563→  const { A, B, C, labels } = data
+   564→
+   565→  const n = A.length // States
+   566→  const m = B[0]?.length ?? 0 // Inputs
+   567→  const p = C.length // Outputs
+   568→
+   569→  const nodes: Node[] = []
+   570→  const margin = 80
+   571→  const availableWidth = width - 2 * margin
+   572→  const availableHeight = height - 2 * margin
+   573→
+   574→  // Input nodes (left column)
+   575→  const inputX = margin
+   576→  const inputSpacing = m > 1 ? availableHeight / (m + 1) : availableHeight / 2
+   577→  for (let i = 0; i < m; i++) {
+   578→    nodes.push({
+   579→      id: `input_${i}`,
+   580→      type: 'input',
+   581→      index: i,
+   582→      label: labels?.inputs?.[i] || `u${i + 1}`,
+   583→      x: inputX,
+   584→      y: margin + inputSpacing * (i + 1),
+   585→      value: 0
+   586→    })
+   587→  }
+   588→
+   589→  // State nodes (middle column)
+   590→  const stateX = margin + availableWidth / 2
+   591→  const stateSpacing = n > 1 ? availableHeight / (n + 1) : availableHeight / 2
+   592→  for (let i = 0; i < n; i++) {
+   593→    nodes.push({
+   594→      id: `state_${i}`,
+   595→      type: 'state',
+   596→      index: i,
+   597→      label: labels?.states?.[i] || `x${i + 1}`,
+   598→      x: stateX,
+   599→      y: margin + stateSpacing * (i + 1),
+   600→      value: 0
+   601→    })
+   602→  }
+   603→
+   604→  // Output nodes (right column)
+   605→  const outputX = width - margin
+   606→  const outputSpacing = p > 1 ? availableHeight / (p + 1) : availableHeight / 2
+   607→  for (let i = 0; i < p; i++) {
+   608→    nodes.push({
+   609→      id: `output_${i}`,
+   610→      type: 'output',
+   611→      index: i,
+   612→      label: labels?.outputs?.[i] || `y${i + 1}`,
+   613→      x: outputX,
+   614→      y: margin + outputSpacing * (i + 1),
+   615→      value: 0
+   616→    })
+   617→  }
+   618→
+   619→  // Create edges
+   620→  const edges: Edge[] = []
+   621→
+   622→  // Input to state edges (B matrix)
+   623→  for (let i = 0; i < n; i++) {
+   624→    for (let j = 0; j < m; j++) {
+   625→      if (Math.abs(B[i][j]) > 0.001) { // Only show non-zero connections
+   626→        const fromNode = nodes.find(n => n.id === `input_${j}`)!
+   627→        const toNode = nodes.find(n => n.id === `state_${i}`)!
+   628→        edges.push({
+   629→          from: fromNode,
+   630→          to: toNode,
+   631→          weight: B[i][j],
+   632→          flowRate: 0
+   633→        })
+   634→      }
+   635→    }
+   636→  }
+   637→
+   638→  // State to state edges (A matrix)
+   639→  for (let i = 0; i < n; i++) {
+   640→    for (let j = 0; j < n; j++) {
+   641→      if (Math.abs(A[i][j]) > 0.001) {
+   642→        const fromNode = nodes.find(n => n.id === `state_${j}`)!
+   643→        const toNode = nodes.find(n => n.id === `state_${i}`)!
+   644→        edges.push({
+   645→          from: fromNode,
+   646→          to: toNode,
+   647→          weight: A[i][j],
+   648→          flowRate: 0
+   649→        })
+   650→      }
+   651→    }
+   652→  }
+   653→
+   654→  // State to output edges (C matrix)
+   655→  for (let i = 0; i < p; i++) {
+   656→    for (let j = 0; j < n; j++) {
+
+<system-reminder>
+Whenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.
+</system-reminder>

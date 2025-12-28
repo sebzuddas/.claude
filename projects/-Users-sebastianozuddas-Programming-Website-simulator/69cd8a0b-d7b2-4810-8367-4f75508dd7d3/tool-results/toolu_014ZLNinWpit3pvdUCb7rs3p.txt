@@ -1,0 +1,149 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/app/abm/page.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   575→          </div>
+   576→        </div>
+   577→      )}
+   578→
+   579→      {/* Timeseries Plots - Two vertical graphs */}
+   580→      <div className="w-full max-w-4xl mt-8 grid grid-cols-1 gap-4">
+   581→        {/* Aggregate/Population-level Plot */}
+   582→        <div className="bg-white rounded-lg shadow-lg p-4">
+   583→          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+   584→            <div>
+   585→              <h3 className="font-semibold">Population Dynamics (Aggregate)</h3>
+   586→              <p className="text-xs text-gray-500">Select up to 5 metrics to display</p>
+   587→            </div>
+   588→            <div className="flex flex-wrap gap-2">
+   589→              {availableAggregateMetrics.map(metric => (
+   590→                <label key={metric} className="flex items-center gap-1 text-sm cursor-pointer">
+   591→                  <input
+   592→                    type="checkbox"
+   593→                    checked={selectedAggregateMetrics.includes(metric)}
+   594→                    onChange={(e) => {
+   595→                      if (e.target.checked) {
+   596→                        if (selectedAggregateMetrics.length < 5) {
+   597→                          setSelectedAggregateMetrics([...selectedAggregateMetrics, metric])
+   598→                        }
+   599→                      } else {
+   600→                        setSelectedAggregateMetrics(selectedAggregateMetrics.filter(m => m !== metric))
+   601→                      }
+   602→                    }}
+   603→                    disabled={!selectedAggregateMetrics.includes(metric) && selectedAggregateMetrics.length >= 5}
+   604→                    className="rounded"
+   605→                  />
+   606→                  <span className={selectedAggregateMetrics.includes(metric) ? 'font-medium' : 'text-gray-600'}>
+   607→                    {metric}
+   608→                  </span>
+   609→                </label>
+   610→              ))}
+   611→            </div>
+   612→          </div>
+   613→          <div className="h-48 relative">
+   614→            {timeseries.size > 0 && selectedAggregateMetrics.length > 0 ? (
+   615→              <TimeseriesPlot
+   616→                data={timeseries}
+   617→                type="aggregate"
+   618→                selectedMetrics={selectedAggregateMetrics}
+   619→              />
+   620→            ) : (
+   621→              <div className="h-full flex items-center justify-center text-gray-400">
+   622→                {selectedAggregateMetrics.length === 0
+   623→                  ? 'Select metrics to display'
+   624→                  : 'Run simulation to see population data'}
+   625→              </div>
+   626→            )}
+   627→          </div>
+   628→        </div>
+   629→
+   630→        {/* Individual Agent-level Plot */}
+   631→        <div className="bg-white rounded-lg shadow-lg p-4">
+   632→          <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
+   633→            <div>
+   634→              <h3 className="font-semibold">Agent-Level Metrics (Individual)</h3>
+   635→              <p className="text-xs text-gray-500">Track properties of a specific agent over time</p>
+   636→            </div>
+   637→            <div className="flex flex-wrap gap-2 items-center">
+   638→              {/* Archetype dropdown */}
+   639→              <select
+   640→                value={selectedArchetype}
+   641→                onChange={(e) => {
+   642→                  setSelectedArchetype(e.target.value)
+   643→                  setSelectedAgentId('')
+   644→                  setSelectedAgentProperties([])
+   645→                }}
+   646→                className="px-2 py-1 border rounded text-sm bg-white"
+   647→              >
+   648→                <option value="">Select Type</option>
+   649→                {availableArchetypes.map(arch => (
+   650→                  <option key={arch} value={arch}>{arch}</option>
+   651→                ))}
+   652→              </select>
+   653→
+   654→              {/* Agent ID dropdown */}
+   655→              <select
+   656→                value={selectedAgentId}
+   657→                onChange={(e) => {
+   658→                  setSelectedAgentId(e.target.value)
+   659→                  setSelectedAgentProperties([])
+   660→                }}
+   661→                className="px-2 py-1 border rounded text-sm bg-white"
+   662→                disabled={!selectedArchetype}
+   663→              >
+   664→                <option value="">Select Agent</option>
+   665→                {agentsOfArchetype().map(id => (
+   666→                  <option key={id} value={id}>{id.slice(0, 12)}...</option>
+   667→                ))}
+   668→              </select>
+   669→            </div>
+   670→          </div>
+   671→
+   672→          {/* Property selection */}
+   673→          {selectedAgentId && (
+   674→            <div className="flex flex-wrap gap-2 mb-3 p-2 bg-gray-50 rounded">
+   675→              <span className="text-xs text-gray-500">Properties:</span>
+   676→              {availableAgentProperties().map(prop => (
+   677→                <label key={prop} className="flex items-center gap-1 text-sm cursor-pointer">
+   678→                  <input
+   679→                    type="checkbox"
+   680→                    checked={selectedAgentProperties.includes(prop)}
+   681→                    onChange={(e) => {
+   682→                      if (e.target.checked) {
+   683→                        setSelectedAgentProperties([...selectedAgentProperties, prop])
+   684→                      } else {
+   685→                        setSelectedAgentProperties(selectedAgentProperties.filter(p => p !== prop))
+   686→                      }
+   687→                    }}
+   688→                    className="rounded"
+   689→                  />
+   690→                  <span className={selectedAgentProperties.includes(prop) ? 'font-medium' : 'text-gray-600'}>
+   691→                    {prop}
+   692→                  </span>
+   693→                </label>
+   694→              ))}
+   695→            </div>
+   696→          )}
+   697→
+   698→          <div className="h-48 relative">
+   699→            {agentTimeseries.size > 0 && selectedAgentProperties.length > 0 ? (
+   700→              <TimeseriesPlot
+   701→                data={agentTimeseries}
+   702→                type="individual"
+   703→                selectedMetrics={selectedAgentProperties}
+   704→              />
+   705→            ) : (
+   706→              <div className="h-full flex items-center justify-center text-gray-400 text-sm">
+   707→                {!selectedArchetype
+   708→                  ? 'Select an agent type'
+   709→                  : !selectedAgentId
+   710→                    ? 'Select an agent to track'
+   711→                    : selectedAgentProperties.length === 0
+   712→                      ? 'Select properties to track'
+   713→                      : 'Run simulation to see agent data'}
+   714→              </div>
+   715→            )}
+   716→          </div>
+   717→        </div>
+   718→      </div>
+   719→
+   720→      {/* Instructions */}
+   721→      <div className="w-full max-w-4xl bg-white rounded-lg shadow-lg p-4 mt-4">
+   722→        <h3 className="font-semibold mb-2">Instructions</h3>

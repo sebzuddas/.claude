@@ -1,0 +1,197 @@
+{
+  "schemaVersion": "1.0",
+
+  "overview": {
+    "purpose": "Schelling's Segregation Model - demonstrates how mild preferences for similar neighbors lead to large-scale segregation",
+
+    "entities": {
+      "componentTypes": [
+        {
+          "name": "Position",
+          "properties": {
+            "x": { "type": "number", "default": 0 },
+            "y": { "type": "number", "default": 0 }
+          }
+        },
+        {
+          "name": "Velocity",
+          "properties": {
+            "x": { "type": "number", "default": 0 },
+            "y": { "type": "number", "default": 0 }
+          }
+        },
+        {
+          "name": "AgentType",
+          "properties": {
+            "type": { "type": "enum", "enumValues": ["A", "B"], "default": "A" }
+          }
+        },
+        {
+          "name": "SteeringBehavior",
+          "properties": {
+            "rules": { "type": "string", "default": "[]" },
+            "maxSpeed": { "type": "number", "default": 30 },
+            "maxForce": { "type": "number", "default": 2 }
+          }
+        }
+      ],
+
+      "archetypes": [
+        {
+          "name": "TypeA",
+          "components": {
+            "Position": { "x": 0, "y": 0 },
+            "Velocity": { "x": 0, "y": 0 },
+            "AgentType": { "type": "A" },
+            "SteeringBehavior": {
+              "rules": [
+                { "type": "flee", "weight": 2.0, "query": { "radius": 50, "filter": { "eq": [{ "prop": "other.AgentType.type" }, "B"] } } },
+                { "type": "cohesion", "weight": 1.0, "query": { "radius": 80, "filter": { "eq": [{ "prop": "other.AgentType.type" }, "A"] } } },
+                { "type": "separation", "weight": 1.5, "query": { "radius": 15 } },
+                { "type": "wander", "weight": 0.2, "params": { "wanderRadius": 10, "wanderDistance": 20, "wanderJitter": 0.2 } }
+              ],
+              "maxSpeed": 30,
+              "maxForce": 2.5
+            }
+          },
+          "visual": {
+            "shape": "circle",
+            "size": 6,
+            "color": "#4285f4"
+          }
+        },
+        {
+          "name": "TypeB",
+          "components": {
+            "Position": { "x": 0, "y": 0 },
+            "Velocity": { "x": 0, "y": 0 },
+            "AgentType": { "type": "B" },
+            "SteeringBehavior": {
+              "rules": [
+                { "type": "flee", "weight": 2.0, "query": { "radius": 50, "filter": { "eq": [{ "prop": "other.AgentType.type" }, "A"] } } },
+                { "type": "cohesion", "weight": 1.0, "query": { "radius": 80, "filter": { "eq": [{ "prop": "other.AgentType.type" }, "B"] } } },
+                { "type": "separation", "weight": 1.5, "query": { "radius": 15 } },
+                { "type": "wander", "weight": 0.2, "params": { "wanderRadius": 10, "wanderDistance": 20, "wanderJitter": 0.2 } }
+              ],
+              "maxSpeed": 30,
+              "maxForce": 2.5
+            }
+          },
+          "visual": {
+            "shape": "square",
+            "size": 5,
+            "color": "#ea4335"
+          }
+        }
+      ]
+    },
+
+    "scales": {
+      "spatial": {
+        "spatial": {
+          "type": "continuous2D",
+          "width": 600,
+          "height": 400
+        },
+        "boundary": "bounded"
+      },
+      "temporal": {
+        "dt": 0.05,
+        "maxTicks": 10000
+      }
+    },
+
+    "processSchedule": [
+      { "system": "Steering", "order": "parallel" },
+      { "system": "Movement", "order": "parallel" }
+    ]
+  },
+
+  "designConcepts": {
+    "sensing": {
+      "description": "Agents sense nearby agents and their types within a radius",
+      "defaultRadius": 60
+    },
+
+    "interaction": {
+      "description": "Agents prefer same-type neighbors via steering behaviors",
+      "rules": []
+    },
+
+    "stochasticity": {
+      "description": "Random initial positions create different segregation patterns each run"
+    },
+
+    "observation": {
+      "timeseries": [
+        {
+          "name": "typeA",
+          "query": { "count": { "filter": { "eq": [{ "prop": "AgentType.type" }, "A"] } } }
+        },
+        {
+          "name": "typeB",
+          "query": { "count": { "filter": { "eq": [{ "prop": "AgentType.type" }, "B"] } } }
+        }
+      ],
+      "events": []
+    }
+  },
+
+  "details": {
+    "initialization": {
+      "entities": [
+        {
+          "archetype": "TypeA",
+          "count": 50,
+          "position": {
+            "type": "random",
+            "region": {
+              "min": { "x": 20, "y": 20 },
+              "max": { "x": 580, "y": 380 }
+            }
+          },
+          "propertyVariation": {
+            "Velocity.x": { "distribution": "uniform", "min": -10, "max": 10 },
+            "Velocity.y": { "distribution": "uniform", "min": -10, "max": 10 }
+          }
+        },
+        {
+          "archetype": "TypeB",
+          "count": 50,
+          "position": {
+            "type": "random",
+            "region": {
+              "min": { "x": 20, "y": 20 },
+              "max": { "x": 580, "y": 380 }
+            }
+          },
+          "propertyVariation": {
+            "Velocity.x": { "distribution": "uniform", "min": -10, "max": 10 },
+            "Velocity.y": { "distribution": "uniform", "min": -10, "max": 10 }
+          }
+        }
+      ]
+    }
+  },
+
+  "uiParameters": [
+    {
+      "name": "Type A Count",
+      "path": "params.typeACount",
+      "type": "number",
+      "min": 10,
+      "max": 100,
+      "step": 10,
+      "description": "Number of Type A agents"
+    },
+    {
+      "name": "Type B Count",
+      "path": "params.typeBCount",
+      "type": "number",
+      "min": 10,
+      "max": 100,
+      "step": 10,
+      "description": "Number of Type B agents"
+    }
+  ]
+}

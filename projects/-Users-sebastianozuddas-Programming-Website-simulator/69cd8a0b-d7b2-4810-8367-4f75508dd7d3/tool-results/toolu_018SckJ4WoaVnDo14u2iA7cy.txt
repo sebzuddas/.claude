@@ -1,0 +1,28 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/components/visualizations/SystemModel.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   746→    const key = `${edge.from.id}->${edge.to.id}`
+   747→    edgeMap.set(key, edge)
+   748→  })
+   749→
+   750→  // Check for bidirectional pairs and mark them for parallel rendering
+   751→  edges.forEach(edge => {
+   752→    // Skip self-loops (they can't be bidirectional)
+   753→    if (edge.from.id === edge.to.id) return
+   754→
+   755→    const reverseKey = `${edge.to.id}->${edge.from.id}`
+   756→    const reverseEdge = edgeMap.get(reverseKey)
+   757→
+   758→    if (reverseEdge && !edge.bidirectional) {
+   759→      // Found bidirectional pair! Mark both edges
+   760→      console.log(`Bidirectional edge detected: ${edge.from.id} ↔ ${edge.to.id}`)
+   761→
+   762→      edge.bidirectional = true
+   763→      edge.parallelOffset = BIDIRECTIONAL_OFFSET
+   764→
+   765→      reverseEdge.bidirectional = true
+   766→      reverseEdge.parallelOffset = -BIDIRECTIONAL_OFFSET
+   767→    }
+   768→  })
+   769→
+   770→  const bidirCount = edges.filter(e => e.bidirectional).length
+   771→  console.log(`Total edges: ${edges.length}, Bidirectional: ${bidirCount} (${bidirCount/2} pairs)`)
+   772→

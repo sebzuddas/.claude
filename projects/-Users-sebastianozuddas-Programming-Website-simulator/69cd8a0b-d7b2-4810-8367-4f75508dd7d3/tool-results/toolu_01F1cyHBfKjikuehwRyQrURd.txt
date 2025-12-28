@@ -1,0 +1,84 @@
+     1→/**
+     2→ * ABM Simulation Controller
+     3→ *
+     4→ * Manages the simulation lifecycle:
+     5→ * - Model initialization from JSON
+     6→ * - Tick execution with process scheduling
+     7→ * - Rule evaluation
+     8→ * - State management
+     9→ * - Data collection
+    10→ */
+    11→
+    12→import type {
+    13→  ABMModelDefinition,
+    14→  Entity,
+    15→  EntityId,
+    16→  Vector2D,
+    17→  RuleDefinition,
+    18→  ProcessScheduleEntry,
+    19→  SimulationEvent,
+    20→  ArchetypeDefinition,
+    21→  EntitySpawnConfig,
+    22→  SteeringBehaviorComponent,
+    23→  ConditionExpression,
+    24→  ObservationConfig,
+    25→  EnvironmentConfig,
+    26→  ZoneDefinition
+    27→} from '../types'
+    28→import { World, Entity as EntityClass, SpatialHashGrid, Grid2DSpatialIndex, createSeededRNG, generateSeed, deepClone } from './ecs'
+    29→import { evaluateCondition, evaluateEffect, evaluateValue, EvaluationContext, EffectResult } from './evaluator'
+    30→import { VectorMath, MathPrimitives, SteeringPrimitives, SpatialPrimitives } from './primitives'
+    31→
+    32→// =============================================================================
+    33→// SIMULATION STATE
+    34→// =============================================================================
+    35→
+    36→export interface SimulationState {
+    37→  tick: number
+    38→  time: number
+    39→  paused: boolean
+    40→  speed: number
+    41→  seed: number
+    42→  initialized: boolean
+    43→}
+    44→
+    45→export interface TimeseriesData {
+    46→  name: string
+    47→  values: number[]
+    48→  ticks: number[]
+    49→}
+    50→
+    51→export interface SimulationSnapshot {
+    52→  tick: number
+    53→  entities: Array<{ id: EntityId; archetype: string; components: Record<string, unknown> }>
+    54→}
+    55→
+    56→// =============================================================================
+    57→// EVENT EMITTER
+    58→// =============================================================================
+    59→
+    60→type EventCallback = (...args: unknown[]) => void
+    61→
+    62→class EventEmitter {
+    63→  private listeners: Map<string, Set<EventCallback>> = new Map()
+    64→
+    65→  on(event: string, callback: EventCallback): void {
+    66→    if (!this.listeners.has(event)) {
+    67→      this.listeners.set(event, new Set())
+    68→    }
+    69→    this.listeners.get(event)!.add(callback)
+    70→  }
+    71→
+    72→  off(event: string, callback: EventCallback): void {
+    73→    this.listeners.get(event)?.delete(callback)
+    74→  }
+    75→
+    76→  emit(event: string, ...args: unknown[]): void {
+    77→    this.listeners.get(event)?.forEach(callback => callback(...args))
+    78→  }
+    79→}
+    80→
+
+<system-reminder>
+Whenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.
+</system-reminder>

@@ -1,0 +1,42 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/app/abm/page.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   529→          </button>
+   530→        </div>
+   531→      </div>
+   532→
+   533→      {/* Entity Inspector (floating panel when entity selected) */}
+   534→      {inspectedEntity && (
+   535→        <div className="w-full max-w-6xl bg-white rounded-lg shadow-lg p-4 mt-4">
+   536→          <div className="flex justify-between items-start mb-3">
+   537→            <h3 className="font-semibold">Agent Inspector</h3>
+   538→            <button
+   539→              onClick={() => {
+   540→                setInspectedEntity(null)
+   541→                rendererRef.current?.setTrackedEntity(null)
+   542→              }}
+   543→              className="text-gray-400 hover:text-gray-600"
+   544→            >
+   545→              ✕
+   546→            </button>
+   547→          </div>
+   548→          {/* Basic info row */}
+   549→          <div className="flex gap-6 mb-3 text-sm">
+   550→            <div><strong>ID:</strong> {inspectedEntity.id}</div>
+   551→            <div><strong>Type:</strong> {inspectedEntity.archetype}</div>
+   552→          </div>
+   553→          {/* Component data grid */}
+   554→          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+   555→            {Object.entries(inspectedEntity.components).map(([type, data]) => (
+   556→              <div key={type} className="bg-gray-50 p-2 rounded">
+   557→                <div className="font-medium text-blue-600 text-sm mb-1">{type}</div>
+   558→                <pre className="text-xs font-mono overflow-auto max-h-24">
+   559→                  {JSON.stringify(data, null, 2)}
+   560→                </pre>
+   561→              </div>
+   562→            ))}
+   563→          </div>
+   564→        </div>
+   565→      )}
+   566→
+   567→      {/* Model Info */}
+   568→      {model && (
+   569→        <div className="w-full max-w-6xl bg-white rounded-lg shadow-lg p-4 mt-4">

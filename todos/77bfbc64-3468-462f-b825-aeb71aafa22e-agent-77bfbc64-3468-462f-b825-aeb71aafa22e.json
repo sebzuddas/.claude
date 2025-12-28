@@ -1,0 +1,26 @@
+[
+  {
+    "content": "Diagnose P5.js canvas rendering issues in Next.js",
+    "status": "completed",
+    "priority": "high",
+    "id": "1"
+  },
+  {
+    "content": "Fix duplicate title display issue",
+    "status": "completed",
+    "priority": "high",
+    "id": "2"
+  },
+  {
+    "content": "Fix missing color legend rendering",
+    "status": "completed",
+    "priority": "high",
+    "id": "3"
+  },
+  {
+    "content": "Adjust canvas sizing and layout in React component",
+    "status": "completed",
+    "priority": "medium",
+    "id": "4"
+  }
+]

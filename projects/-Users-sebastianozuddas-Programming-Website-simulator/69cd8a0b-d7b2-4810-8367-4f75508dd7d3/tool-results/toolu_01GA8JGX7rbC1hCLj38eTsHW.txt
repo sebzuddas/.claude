@@ -1,0 +1,39 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/app/abm/demos/sir.ts has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+    46→        }
+    47→      ],
+    48→
+    49→      archetypes: [
+    50→        {
+    51→          name: 'Person',
+    52→          components: {
+    53→            Position: { x: 0, y: 0 },
+    54→            Velocity: { x: 0, y: 0 },
+    55→            Health: { status: 'S', infectionTime: 0 },
+    56→            SteeringBehavior: {
+    57→              rules: [
+    58→                { type: 'wander', weight: 1.0, params: { wanderRadius: 20, wanderDistance: 40, wanderJitter: 0.3 } },
+    59→                { type: 'separation', weight: 0.5, query: { radius: 15 } }
+    60→              ],
+    61→              maxSpeed: 30,
+    62→              maxForce: 2
+    63→            }
+    64→          },
+    65→          visual: {
+    66→            shape: 'circle',
+    67→            size: 5,
+    68→            colorByState: {
+    69→              property: 'Health.status',
+    70→              minColor: '#34a853',
+    71→              maxColor: '#ea4335',
+    72→              colorMap: {
+    73→                'S': '#34a853',  // Green for Susceptible
+    74→                'I': '#ea4335',  // Red for Infected
+    75→                'R': '#4285f4'   // Blue for Recovered
+    76→              }
+    77→            }
+    78→          }
+    79→        },
+    80→        {
+    81→          name: 'Susceptible',
+    82→          extends: 'Person',
+    83→          components: {

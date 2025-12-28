@@ -1,0 +1,44 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/lib/abm/core/simulation.ts has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   478→      const entityObj = entity as EntityClass
+   479→      const position = entityObj.getComponent<Vector2D>('Position')
+   480→      const velocity = entityObj.getComponent<Vector2D>('Velocity')
+   481→
+   482→      if (position && velocity) {
+   483→        let newPos = VectorMath.add(position, VectorMath.mul(velocity, dt))
+   484→
+   485→        // Apply boundary conditions
+   486→        const width = this.environmentConfig.spatial.width
+   487→        const height = this.environmentConfig.spatial.height
+   488→
+   489→        if (this.environmentConfig.boundary === 'toroidal') {
+   490→          newPos.x = ((newPos.x % width) + width) % width
+   491→          newPos.y = ((newPos.y % height) + height) % height
+   492→        } else if (this.environmentConfig.boundary === 'bounded') {
+   493→          // Reflect velocity when hitting boundaries
+   494→          let newVel = { ...velocity }
+   495→          if (newPos.x <= 0 || newPos.x >= width) {
+   496→            newVel.x = -velocity.x * 0.8  // Reverse and dampen
+   497→          }
+   498→          if (newPos.y <= 0 || newPos.y >= height) {
+   499→            newVel.y = -velocity.y * 0.8  // Reverse and dampen
+   500→          }
+   501→          // Update velocity if changed
+   502→          if (newVel.x !== velocity.x || newVel.y !== velocity.y) {
+   503→            entityObj.setComponent('Velocity', newVel)
+   504→          }
+   505→          // Clamp position
+   506→          newPos.x = MathPrimitives.clamp(newPos.x, 0, width)
+   507→          newPos.y = MathPrimitives.clamp(newPos.y, 0, height)
+   508→        }
+   509→
+   510→        if (parallel) {
+   511→          updates.push({ entity: entityObj, newPos })
+   512→        } else {
+   513→          entityObj.setComponent('Position', newPos)
+   514→          this.world.updateEntityPosition(entityObj.id, newPos)
+   515→        }
+   516→      }
+   517→    }
+   518→
+   519→    // Apply parallel updates
+   520→    if (parallel && this.world) {

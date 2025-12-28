@@ -1,0 +1,333 @@
+// Heat Map Visualization with P5.js
+
+let heatmapData = null;
+let colorPalette = [];
+let cellWidth, cellHeight;
+let heatmapTitle = '';
+let xLabels = [];
+let yLabels = [];
+let dataMin, dataMax;
+let canvasWidth = 800;
+let canvasHeight = 600;
+
+// Typography settings
+let titleFontSize = 16;
+let labelFontSize = 12;
+let valueFontSize = 10;
+
+// Legend graphics buffer (created once, reused)
+let legendGraphics = null;
+
+// Schema for validation
+const heatmapSchema = {
+    type: 'object',
+    required: ['data']
+};
+
+async function setup() {
+    // Create canvas in the container
+    const container = document.getElementById('viz-canvas-container');
+    const canvas = createCanvas(canvasWidth, canvasHeight);
+    canvas.parent(container);
+    canvas.id('viz-canvas');
+    
+    // Load font sizes from theme configuration
+    await loadFontSizes();
+    
+    // Initialize with data from URL or demo data
+    initializeData();
+    
+    // Setup event listeners
+    setupEventListeners();
+    
+    // Update color palette
+    await updateColorPalette();
+    
+    textAlign(CENTER, CENTER);
+}
+
+async function loadFontSizes() {
+    try {
+        titleFontSize = await TypographyUtils.getVisualizationFontSize('heatmap', 'titleSize');
+        labelFontSize = await TypographyUtils.getVisualizationFontSize('heatmap', 'labelSize');
+        valueFontSize = await TypographyUtils.getVisualizationFontSize('heatmap', 'fontSize');
+    } catch (error) {
+        console.warn('Could not load font sizes from theme, using defaults');
+        titleFontSize = 20;
+        labelFontSize = 12;
+        valueFontSize = 10;
+    }
+}
+
+function draw() {
+    background(240);
+    
+    if (!heatmapData || !heatmapData.data) {
+        // Show instructions when no data
+        fill(100);
+        textAlign(CENTER, CENTER);
+        textSize(16);
+        text('Load data via URL parameter, file upload, or use demo data', width/2, height/2);
+        return;
+    }
+    
+    drawHeatmap();
+    drawLabels();
+    drawTitle();
+    drawLegend();
+}
+
+function initializeData() {
+    // Try to get data from various sources
+    const urlData = DataParser.parseURLParams();
+    const hashData = DataParser.parseHashData();
+    
+    if (urlData.error || hashData.error) {
+        Utils.showMessage(urlData.error || hashData.error, 'error');
+        return;
+    }
+    
+    if (urlData.demo || (!urlData.data && !hashData.data)) {
+        // Generate demo data
+        generateDemoData();
+        Utils.showMessage('Demo data loaded. Upload your own JSON file or use URL parameters.', 'success');
+    } else {
+        // Use provided data
+        const data = urlData.data || hashData.data;
+        setHeatmapData(data);
+    }
+}
+
+function generateDemoData() {
+    const rows = 10;
+    const cols = 8;
+    const data = [];
+    
+    for (let i = 0; i < rows; i++) {
+        const row = [];
+        for (let j = 0; j < cols; j++) {
+            // Create some interesting patterns
+            const value = Math.sin(i * 0.3) * Math.cos(j * 0.4) * 50 + 
+                         Math.random() * 30 + 25;
+            row.push(Math.round(value * 10) / 10);
+        }
+        data.push(row);
+    }
+    
+    setHeatmapData({
+        data: data,
+        title: 'Demo Heat Map',
+        labels: {
+            x: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'],
+            y: ['Row 1', 'Row 2', 'Row 3', 'Row 4', 'Row 5', 'Row 6', 'Row 7', 'Row 8', 'Row 9', 'Row 10']
+        }
+    });
+}
+
+function setHeatmapData(data) {
+    // Validate data
+    const validation = DataParser.validateData(data, heatmapSchema);
+    if (!validation.valid) {
+        Utils.showMessage('Invalid data: ' + validation.errors.join(', '), 'error');
+        return;
+    }
+    
+    heatmapData = data;
+    heatmapTitle = data.title || 'Heat Map';
+    
+    // Extract labels
+    if (data.labels) {
+        xLabels = data.labels.x || [];
+        yLabels = data.labels.y || [];
+    }
+    
+    // Calculate data range
+    const flatData = data.data.flat();
+    dataMin = Math.min(...flatData);
+    dataMax = Math.max(...flatData);
+    
+    // Calculate cell dimensions
+    const marginLeft = 80;
+    const marginRight = 100; // For legend
+    const marginTop = 60;
+    const marginBottom = 60;
+    
+    const availableWidth = width - marginLeft - marginRight;
+    const availableHeight = height - marginTop - marginBottom;
+    
+    cellWidth = availableWidth / data.data[0].length;
+    cellHeight = availableHeight / data.data.length;
+    
+    Utils.showMessage('Heat map data loaded successfully!', 'success');
+}
+
+function drawHeatmap() {
+    if (!heatmapData) return;
+    
+    const marginLeft = 80;
+    const marginTop = 60;
+    
+    noStroke();
+    
+    for (let i = 0; i < heatmapData.data.length; i++) {
+        for (let j = 0; j < heatmapData.data[i].length; j++) {
+            const value = heatmapData.data[i][j];
+            const colorIndex = Math.floor(Utils.map(value, dataMin, dataMax, 0, colorPalette.length - 1));
+            const [r, g, b] = colorPalette[colorIndex] || [128, 128, 128];
+            
+            fill(r, g, b);
+            
+            const x = marginLeft + j * cellWidth;
+            const y = marginTop + i * cellHeight;
+            
+            rect(x, y, cellWidth, cellHeight);
+            
+            // Add value text if cells are large enough
+            if (cellWidth > 40 && cellHeight > 20) {
+                fill(value > (dataMin + dataMax) / 2 ? 255 : 0);
+                textAlign(CENTER, CENTER);
+                textSize(Math.min(cellWidth * 0.2, cellHeight * 0.3, valueFontSize));
+                text(value.toFixed(1), x + cellWidth/2, y + cellHeight/2);
+            }
+        }
+    }
+}
+
+function drawLabels() {
+    if (!heatmapData) return;
+    
+    const marginLeft = 80;
+    const marginTop = 60;
+    
+    fill(60);
+    textAlign(CENTER, CENTER);
+    textSize(labelFontSize);
+    
+    // X-axis labels
+    for (let j = 0; j < heatmapData.data[0].length; j++) {
+        const label = xLabels[j] || `Col ${j + 1}`;
+        const x = marginLeft + j * cellWidth + cellWidth/2;
+        const y = marginTop + heatmapData.data.length * cellHeight + 20;
+        
+        push();
+        translate(x, y);
+        rotate(-PI/6); // Slight angle for better readability
+        text(label, 0, 0);
+        pop();
+    }
+    
+    // Y-axis labels
+    textAlign(RIGHT, CENTER);
+    for (let i = 0; i < heatmapData.data.length; i++) {
+        const label = yLabels[i] || `Row ${i + 1}`;
+        const x = marginLeft - 10;
+        const y = marginTop + i * cellHeight + cellHeight/2;
+        text(label, x, y);
+    }
+}
+
+function drawTitle() {
+    fill(60);
+    textAlign(CENTER, CENTER);
+    textSize(titleFontSize);
+    text(heatmapTitle, width/2, 30);
+}
+
+function drawLegend() {
+    if (!heatmapData) return;
+    
+    const legendX = width - 80;
+    const legendY = 80;
+    const legendWidth = 20;
+    const legendHeight = 200;
+    
+    // Draw color bar
+    noStroke();
+    for (let i = 0; i < legendHeight; i++) {
+        const t = i / (legendHeight - 1);
+        const colorIndex = Math.floor(t * (colorPalette.length - 1));
+        const [r, g, b] = colorPalette[colorIndex] || [128, 128, 128];
+        
+        fill(r, g, b);
+        rect(legendX, legendY + legendHeight - i, legendWidth, 1);
+    }
+    
+    // Draw legend border
+    stroke(100);
+    strokeWeight(1);
+    noFill();
+    rect(legendX, legendY, legendWidth, legendHeight);
+    
+    // Draw legend labels
+    fill(60);
+    noStroke();
+    textAlign(LEFT, CENTER);
+    textSize(labelFontSize);
+    text(dataMax.toFixed(1), legendX + legendWidth + 5, legendY);
+    text(((dataMax + dataMin) / 2).toFixed(1), legendX + legendWidth + 5, legendY + legendHeight/2);
+    text(dataMin.toFixed(1), legendX + legendWidth + 5, legendY + legendHeight);
+}
+
+async function updateColorPalette() {
+    const paletteName = document.getElementById('colorPalette').value;
+    colorPalette = await ColorUtils.getColorPalette(paletteName, 256);
+    redraw();
+}
+
+function setupEventListeners() {
+    // Color palette selector
+    document.getElementById('colorPalette').addEventListener('change', updateColorPalette);
+    
+    // Regenerate demo data
+    document.getElementById('regenerateBtn').addEventListener('click', () => {
+        generateDemoData();
+        redraw();
+    });
+    
+    // Export functionality
+    document.getElementById('exportBtn').addEventListener('click', () => {
+        save('heatmap.png');
+        Utils.showMessage('Image exported successfully!', 'success');
+    });
+    
+    // File drop zone
+    FileHandler.setupDropZone('drop-zone', (result) => {
+        if (result.error) {
+            Utils.showMessage(result.error, 'error');
+        } else if (result.data) {
+            setHeatmapData(result.data);
+            redraw();
+        }
+    });
+    
+    // PostMessage listener for iframe integration
+    MessageHandler.setupPostMessageListener((data) => {
+        setHeatmapData(data);
+        redraw();
+        Utils.showMessage('Data updated via PostMessage', 'success');
+    });
+}
+
+function windowResized() {
+    // Responsive canvas
+    const container = document.getElementById('viz-canvas-container');
+    const containerWidth = container.clientWidth;
+    const newWidth = Math.min(containerWidth, 1000);
+    const newHeight = Math.max(400, newWidth * 0.75);
+    
+    resizeCanvas(newWidth, newHeight);
+    
+    if (heatmapData) {
+        // Recalculate cell dimensions
+        const marginLeft = 80;
+        const marginRight = 100;
+        const marginTop = 60;
+        const marginBottom = 60;
+        
+        const availableWidth = width - marginLeft - marginRight;
+        const availableHeight = height - marginTop - marginBottom;
+        
+        cellWidth = availableWidth / heatmapData.data[0].length;
+        cellHeight = availableHeight / heatmapData.data.length;
+    }
+}

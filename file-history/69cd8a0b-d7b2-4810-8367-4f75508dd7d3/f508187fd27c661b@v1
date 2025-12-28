@@ -1,0 +1,598 @@
+/**
+ * Safe Expression Evaluator
+ *
+ * Evaluates predicate trees (conditions) and operation trees (effects)
+ * from JSON without using eval() or Function constructor.
+ */
+
+import type {
+  ConditionExpression,
+  ValueExpression,
+  EffectExpression,
+  Entity,
+  Vector2D,
+  EntityId,
+  SimulationEvent
+} from '../types'
+import { World } from './ecs'
+import {
+  VectorMath,
+  MathPrimitives,
+  AggregationPrimitives,
+  SpatialPrimitives
+} from './primitives'
+
+// =============================================================================
+// EVALUATION CONTEXT
+// =============================================================================
+
+export interface EvaluationContext {
+  world: World
+  self: Entity
+  other?: Entity
+  tick: number
+  dt: number
+  rng: () => number
+  zones?: Array<{ id: string; shape: 'rectangle' | 'circle'; position: Vector2D; size: Vector2D | number }>
+  parameters?: Record<string, unknown>
+}
+
+// =============================================================================
+// EFFECT RESULTS
+// =============================================================================
+
+export interface EffectResult {
+  propertyChanges: Array<{ entityId: EntityId; path: string; value: unknown }>
+  spawns: Array<{ archetype: string; position?: Vector2D; properties?: Record<string, unknown> }>
+  destroys: EntityId[]
+  events: SimulationEvent[]
+}
+
+// =============================================================================
+// VALUE EXPRESSION EVALUATOR
+// =============================================================================
+
+export function evaluateValue(expr: ValueExpression, ctx: EvaluationContext): unknown {
+  // Primitive values
+  if (typeof expr === 'number' || typeof expr === 'string' || typeof expr === 'boolean') {
+    return expr
+  }
+
+  // Object expressions
+  if (typeof expr === 'object' && expr !== null) {
+    // Property access
+    if ('prop' in expr) {
+      return evaluatePropertyPath(expr.prop, ctx)
+    }
+
+    // Arithmetic operations
+    if ('add' in expr) {
+      const a = evaluateValue(expr.add[0], ctx)
+      const b = evaluateValue(expr.add[1], ctx)
+      if (typeof a === 'number' && typeof b === 'number') return a + b
+      if (isVector2D(a) && isVector2D(b)) return VectorMath.add(a, b)
+      return 0
+    }
+
+    if ('sub' in expr) {
+      const a = evaluateValue(expr.sub[0], ctx)
+      const b = evaluateValue(expr.sub[1], ctx)
+      if (typeof a === 'number' && typeof b === 'number') return a - b
+      if (isVector2D(a) && isVector2D(b)) return VectorMath.sub(a, b)
+      return 0
+    }
+
+    if ('mul' in expr) {
+      const a = evaluateValue(expr.mul[0], ctx)
+      const b = evaluateValue(expr.mul[1], ctx)
+      if (typeof a === 'number' && typeof b === 'number') return a * b
+      if (isVector2D(a) && typeof b === 'number') return VectorMath.mul(a, b)
+      if (typeof a === 'number' && isVector2D(b)) return VectorMath.mul(b, a)
+      return 0
+    }
+
+    if ('div' in expr) {
+      const a = evaluateValue(expr.div[0], ctx)
+      const b = evaluateValue(expr.div[1], ctx)
+      if (typeof a === 'number' && typeof b === 'number') return b !== 0 ? a / b : 0
+      if (isVector2D(a) && typeof b === 'number') return VectorMath.div(a, b)
+      return 0
+    }
+
+    if ('mod' in expr) {
+      const a = evaluateValue(expr.mod[0], ctx)
+      const b = evaluateValue(expr.mod[1], ctx)
+      if (typeof a === 'number' && typeof b === 'number') return b !== 0 ? a % b : 0
+      return 0
+    }
+
+    // Math functions
+    if ('abs' in expr) {
+      const v = evaluateValue(expr.abs, ctx)
+      return typeof v === 'number' ? Math.abs(v) : 0
+    }
+
+    if ('floor' in expr) {
+      const v = evaluateValue(expr.floor, ctx)
+      return typeof v === 'number' ? Math.floor(v) : 0
+    }
+
+    if ('ceil' in expr) {
+      const v = evaluateValue(expr.ceil, ctx)
+      return typeof v === 'number' ? Math.ceil(v) : 0
+    }
+
+    if ('round' in expr) {
+      const v = evaluateValue(expr.round, ctx)
+      return typeof v === 'number' ? Math.round(v) : 0
+    }
+
+    if ('min' in expr) {
+      const values = expr.min.map(e => evaluateValue(e, ctx))
+      const numbers = values.filter((v): v is number => typeof v === 'number')
+      return numbers.length > 0 ? Math.min(...numbers) : 0
+    }
+
+    if ('max' in expr) {
+      const values = expr.max.map(e => evaluateValue(e, ctx))
+      const numbers = values.filter((v): v is number => typeof v === 'number')
+      return numbers.length > 0 ? Math.max(...numbers) : 0
+    }
+
+    if ('lerp' in expr) {
+      const a = evaluateValue(expr.lerp.a, ctx)
+      const b = evaluateValue(expr.lerp.b, ctx)
+      const t = evaluateValue(expr.lerp.t, ctx)
+      if (typeof a === 'number' && typeof b === 'number' && typeof t === 'number') {
+        return MathPrimitives.lerp(a, b, t)
+      }
+      if (isVector2D(a) && isVector2D(b) && typeof t === 'number') {
+        return VectorMath.lerp(a, b, t)
+      }
+      return 0
+    }
+
+    if ('clamp' in expr) {
+      const value = evaluateValue(expr.clamp.value, ctx)
+      const min = evaluateValue(expr.clamp.min, ctx)
+      const max = evaluateValue(expr.clamp.max, ctx)
+      if (typeof value === 'number' && typeof min === 'number' && typeof max === 'number') {
+        return MathPrimitives.clamp(value, min, max)
+      }
+      return 0
+    }
+
+    if ('noise' in expr) {
+      const x = evaluateValue(expr.noise.x, ctx)
+      const y = expr.noise.y ? evaluateValue(expr.noise.y, ctx) : 0
+      if (typeof x === 'number' && typeof y === 'number') {
+        return MathPrimitives.noise(x, y)
+      }
+      return 0
+    }
+
+    if ('random' in expr) {
+      const min = expr.random.min ? evaluateValue(expr.random.min, ctx) : 0
+      const max = expr.random.max ? evaluateValue(expr.random.max, ctx) : 1
+      if (typeof min === 'number' && typeof max === 'number') {
+        return MathPrimitives.sampleUniform(min, max, ctx.rng)
+      }
+      return ctx.rng()
+    }
+
+    if ('distance' in expr) {
+      const from = evaluateValue(expr.distance.from, ctx)
+      const to = evaluateValue(expr.distance.to, ctx)
+      if (isVector2D(from) && isVector2D(to)) {
+        return VectorMath.distance(from, to)
+      }
+      return Infinity
+    }
+
+    // Aggregation functions
+    if ('count' in expr) {
+      let entities = ctx.world.getAllEntities()
+      if (expr.count.filter) {
+        entities = entities.filter(e => evaluateCondition(expr.count.filter!, { ...ctx, self: e }))
+      }
+      return entities.length
+    }
+
+    if ('average' in expr) {
+      let entities = ctx.world.getAllEntities()
+      if (expr.average.filter) {
+        entities = entities.filter(e => evaluateCondition(expr.average.filter!, { ...ctx, self: e }))
+      }
+      return AggregationPrimitives.average(entities, expr.average.property)
+    }
+
+    if ('sum' in expr) {
+      let entities = ctx.world.getAllEntities()
+      if (expr.sum.filter) {
+        entities = entities.filter(e => evaluateCondition(expr.sum.filter!, { ...ctx, self: e }))
+      }
+      return AggregationPrimitives.sum(entities, expr.sum.property)
+    }
+
+    if ('nearest' in expr) {
+      const selfPos = ctx.self.getComponent<Vector2D>('Position')
+      if (!selfPos) return []
+
+      let neighbors = SpatialPrimitives.nearestN(
+        ctx.world,
+        selfPos,
+        expr.nearest.n || 1,
+        Infinity,
+        e => e.id !== ctx.self.id
+      )
+
+      if (expr.nearest.filter) {
+        neighbors = neighbors.filter(e => evaluateCondition(expr.nearest.filter!, { ...ctx, other: e }))
+      }
+
+      return neighbors.map(e => e.id)
+    }
+  }
+
+  return undefined
+}
+
+// =============================================================================
+// PROPERTY PATH EVALUATOR
+// =============================================================================
+
+function evaluatePropertyPath(path: string, ctx: EvaluationContext): unknown {
+  const parts = path.split('.')
+  const root = parts[0]
+
+  let entity: Entity | undefined
+  let startIndex = 1
+
+  switch (root) {
+    case 'self':
+      entity = ctx.self
+      break
+    case 'other':
+      entity = ctx.other
+      break
+    case 'tick':
+      return ctx.tick
+    case 'dt':
+      return ctx.dt
+    case 'random':
+      return ctx.rng()
+    case 'params':
+      // Access simulation parameters
+      let value: unknown = ctx.parameters
+      for (let i = 1; i < parts.length; i++) {
+        if (value === null || value === undefined) return undefined
+        value = (value as Record<string, unknown>)[parts[i]]
+      }
+      return value
+    default:
+      // Assume it's a component path on self
+      entity = ctx.self
+      startIndex = 0
+  }
+
+  if (!entity) return undefined
+
+  // Navigate the path
+  const componentPath = parts.slice(startIndex).join('.')
+  return entity.getProperty(componentPath)
+}
+
+// =============================================================================
+// CONDITION EXPRESSION EVALUATOR
+// =============================================================================
+
+export function evaluateCondition(expr: ConditionExpression, ctx: EvaluationContext): boolean {
+  // Boolean literal
+  if (typeof expr === 'boolean') {
+    return expr
+  }
+
+  // Object expressions
+  if (typeof expr === 'object' && expr !== null) {
+    // Logical operators
+    if ('and' in expr) {
+      return expr.and.every(subExpr => evaluateCondition(subExpr, ctx))
+    }
+
+    if ('or' in expr) {
+      return expr.or.some(subExpr => evaluateCondition(subExpr, ctx))
+    }
+
+    if ('not' in expr) {
+      return !evaluateCondition(expr.not, ctx)
+    }
+
+    // Comparison operators
+    if ('eq' in expr) {
+      const a = evaluateValue(expr.eq[0], ctx)
+      const b = evaluateValue(expr.eq[1], ctx)
+      return deepEqual(a, b)
+    }
+
+    if ('neq' in expr) {
+      const a = evaluateValue(expr.neq[0], ctx)
+      const b = evaluateValue(expr.neq[1], ctx)
+      return !deepEqual(a, b)
+    }
+
+    if ('gt' in expr) {
+      const a = evaluateValue(expr.gt[0], ctx)
+      const b = evaluateValue(expr.gt[1], ctx)
+      if (typeof a === 'number' && typeof b === 'number') return a > b
+      return false
+    }
+
+    if ('gte' in expr) {
+      const a = evaluateValue(expr.gte[0], ctx)
+      const b = evaluateValue(expr.gte[1], ctx)
+      if (typeof a === 'number' && typeof b === 'number') return a >= b
+      return false
+    }
+
+    if ('lt' in expr) {
+      const a = evaluateValue(expr.lt[0], ctx)
+      const b = evaluateValue(expr.lt[1], ctx)
+      if (typeof a === 'number' && typeof b === 'number') return a < b
+      return false
+    }
+
+    if ('lte' in expr) {
+      const a = evaluateValue(expr.lte[0], ctx)
+      const b = evaluateValue(expr.lte[1], ctx)
+      if (typeof a === 'number' && typeof b === 'number') return a <= b
+      return false
+    }
+
+    // Component check
+    if ('hasComponent' in expr) {
+      return ctx.self.hasComponent(expr.hasComponent)
+    }
+
+    // Zone check
+    if ('inZone' in expr) {
+      const position = ctx.self.getComponent<Vector2D>('Position')
+      if (!position || !ctx.zones) return false
+      const zones = SpatialPrimitives.inZone(position, ctx.zones)
+      return zones.includes(expr.inZone)
+    }
+
+    // Radius check
+    if ('withinRadius' in expr) {
+      const center = evaluateValue(expr.withinRadius.center, ctx)
+      const radius = evaluateValue(expr.withinRadius.radius, ctx)
+      const selfPos = ctx.self.getComponent<Vector2D>('Position')
+
+      if (!isVector2D(center) || typeof radius !== 'number' || !selfPos) {
+        return false
+      }
+
+      return VectorMath.distance(selfPos, center) <= radius
+    }
+  }
+
+  return false
+}
+
+// =============================================================================
+// EFFECT EXPRESSION EVALUATOR
+// =============================================================================
+
+export function evaluateEffect(expr: EffectExpression, ctx: EvaluationContext): EffectResult {
+  const result: EffectResult = {
+    propertyChanges: [],
+    spawns: [],
+    destroys: [],
+    events: []
+  }
+
+  if (typeof expr !== 'object' || expr === null) {
+    return result
+  }
+
+  // Set property
+  if ('set' in expr) {
+    const value = evaluateValue(expr.set.value, ctx)
+    const target = resolveTargetPath(expr.set.target, ctx)
+    if (target) {
+      result.propertyChanges.push({
+        entityId: target.entityId,
+        path: target.path,
+        value
+      })
+    }
+  }
+
+  // Increment property
+  if ('increment' in expr) {
+    const amount = evaluateValue(expr.increment.amount, ctx)
+    const target = resolveTargetPath(expr.increment.target, ctx)
+    if (target && typeof amount === 'number') {
+      const entity = ctx.world.getEntity(target.entityId)
+      if (entity) {
+        const current = entity.getProperty(target.path)
+        const newValue = (typeof current === 'number' ? current : 0) + amount
+        result.propertyChanges.push({
+          entityId: target.entityId,
+          path: target.path,
+          value: newValue
+        })
+      }
+    }
+  }
+
+  // Decrement property
+  if ('decrement' in expr) {
+    const amount = evaluateValue(expr.decrement.amount, ctx)
+    const target = resolveTargetPath(expr.decrement.target, ctx)
+    if (target && typeof amount === 'number') {
+      const entity = ctx.world.getEntity(target.entityId)
+      if (entity) {
+        const current = entity.getProperty(target.path)
+        const newValue = (typeof current === 'number' ? current : 0) - amount
+        result.propertyChanges.push({
+          entityId: target.entityId,
+          path: target.path,
+          value: newValue
+        })
+      }
+    }
+  }
+
+  // State transition
+  if ('transition' in expr) {
+    const target = resolveTargetPath(expr.transition.target, ctx)
+    if (target) {
+      result.propertyChanges.push({
+        entityId: target.entityId,
+        path: target.path,
+        value: expr.transition.to
+      })
+    }
+  }
+
+  // Spawn entity
+  if ('spawn' in expr) {
+    const spawnData: { archetype: string; position?: Vector2D; properties?: Record<string, unknown> } = {
+      archetype: expr.spawn.archetype
+    }
+
+    if (expr.spawn.position) {
+      const pos = evaluateValue(expr.spawn.position, ctx)
+      if (isVector2D(pos)) {
+        spawnData.position = pos
+      }
+    }
+
+    if (expr.spawn.properties) {
+      spawnData.properties = {}
+      for (const [path, valueExpr] of Object.entries(expr.spawn.properties)) {
+        spawnData.properties[path] = evaluateValue(valueExpr, ctx)
+      }
+    }
+
+    result.spawns.push(spawnData)
+  }
+
+  // Destroy entity
+  if ('destroy' in expr) {
+    const target = expr.destroy.target || 'self'
+    if (target === 'self') {
+      result.destroys.push(ctx.self.id)
+    } else if (target === 'other' && ctx.other) {
+      result.destroys.push(ctx.other.id)
+    } else if (typeof target === 'string') {
+      result.destroys.push(target)
+    }
+  }
+
+  // Emit event
+  if ('emit' in expr) {
+    const eventData: Record<string, unknown> = {}
+    if (expr.emit.data) {
+      for (const [key, valueExpr] of Object.entries(expr.emit.data)) {
+        eventData[key] = evaluateValue(valueExpr, ctx)
+      }
+    }
+
+    result.events.push({
+      tick: ctx.tick,
+      event: expr.emit.event,
+      entityId: ctx.self.id,
+      data: eventData
+    })
+  }
+
+  // Sequence of effects
+  if ('sequence' in expr) {
+    for (const subEffect of expr.sequence) {
+      const subResult = evaluateEffect(subEffect, ctx)
+      result.propertyChanges.push(...subResult.propertyChanges)
+      result.spawns.push(...subResult.spawns)
+      result.destroys.push(...subResult.destroys)
+      result.events.push(...subResult.events)
+    }
+  }
+
+  // Conditional effect
+  if ('conditional' in expr) {
+    const condition = evaluateCondition(expr.conditional.condition, ctx)
+    const effectToRun = condition ? expr.conditional.then : expr.conditional.else
+    if (effectToRun) {
+      const subResult = evaluateEffect(effectToRun, ctx)
+      result.propertyChanges.push(...subResult.propertyChanges)
+      result.spawns.push(...subResult.spawns)
+      result.destroys.push(...subResult.destroys)
+      result.events.push(...subResult.events)
+    }
+  }
+
+  // Probabilistic effect
+  if ('probability' in expr) {
+    const chance = evaluateValue(expr.probability.chance, ctx)
+    if (typeof chance === 'number' && ctx.rng() < chance) {
+      const subResult = evaluateEffect(expr.probability.effect, ctx)
+      result.propertyChanges.push(...subResult.propertyChanges)
+      result.spawns.push(...subResult.spawns)
+      result.destroys.push(...subResult.destroys)
+      result.events.push(...subResult.events)
+    }
+  }
+
+  return result
+}
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+function resolveTargetPath(path: string, ctx: EvaluationContext): { entityId: EntityId; path: string } | null {
+  const parts = path.split('.')
+  const root = parts[0]
+
+  if (root === 'self') {
+    return { entityId: ctx.self.id, path: parts.slice(1).join('.') }
+  } else if (root === 'other' && ctx.other) {
+    return { entityId: ctx.other.id, path: parts.slice(1).join('.') }
+  } else {
+    // Assume it's a path on self
+    return { entityId: ctx.self.id, path }
+  }
+}
+
+function isVector2D(value: unknown): value is Vector2D {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as Vector2D).x === 'number' &&
+    typeof (value as Vector2D).y === 'number'
+  )
+}
+
+function deepEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true
+
+  if (typeof a !== typeof b) return false
+
+  if (typeof a !== 'object' || a === null || b === null) {
+    return a === b
+  }
+
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) return false
+    return a.every((item, i) => deepEqual(item, b[i]))
+  }
+
+  if (Array.isArray(a) !== Array.isArray(b)) return false
+
+  const aKeys = Object.keys(a)
+  const bKeys = Object.keys(b)
+
+  if (aKeys.length !== bKeys.length) return false
+
+  return aKeys.every(key => deepEqual((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key]))
+}

@@ -1,0 +1,46 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/components/visualizations/SystemModel.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   266→              }
+   267→            })
+   268→          }
+   269→
+   270→          function drawEdges(p: any, edges: Edge[]) {
+   271→            edges.forEach(edge => {
+   272→              const { from, to, weight, flowRate, curved, curveOffset } = edge
+   273→
+   274→              // Arrow color based on positive/negative
+   275→              const isPositive = weight >= 0
+   276→              p.stroke(isPositive ? [50, 150, 50, 180] : [150, 50, 50, 180])
+   277→              p.strokeWeight(PIPE_WIDTH) // Pipe-like width
+   278→
+   279→              // Draw arrow (parallel pipe if bidirectional, straight otherwise)
+   280→              drawArrow(p, from, to, isPositive, curved, curveOffset)
+   281→
+   282→              // Calculate label position
+   283→              let midX, midY
+   284→              if (curved) {
+   285→                // For parallel pipes, offset the label position
+   286→                const offset = getParallelOffset(from.x, from.y, to.x, to.y, curveOffset)
+   287→                midX = (from.x + to.x) / 2 + offset.x
+   288→                midY = (from.y + to.y) / 2 + offset.y
+   289→              } else {
+   290→                midX = (from.x + to.x) / 2
+   291→                midY = (from.y + to.y) / 2
+   292→              }
+   293→
+   294→              // Draw flow rate label
+   295→              p.fill(60)
+   296→              p.noStroke()
+   297→              p.textSize(10)
+   298→              p.textAlign(p.CENTER, p.BOTTOM)
+   299→              p.text(flowRate.toFixed(2), midX, midY - 10)
+   300→
+   301→              // Draw weight
+   302→              p.textAlign(p.CENTER, p.TOP)
+   303→              p.fill(100)
+   304→              p.text(`w=${weight.toFixed(2)}`, midX, midY + 10)
+   305→            })
+   306→          }
+   307→
+   308→          function drawArrow(p: any, from: Node, to: Node, isPositive: boolean, curved: boolean, curveOffset: number) {
+   309→            const x1 = from.x
+   310→            const y1 = from.y

@@ -1,0 +1,21 @@
+793-      {/* Playback Controls */}
+794-      <div ref={controlsRef} className="mt-4 p-4 bg-gray-100 rounded-lg">
+795-        {/* Export Controls */}
+796-        <div className="flex items-center justify-center gap-2 mb-4 pb-3 border-b border-gray-300">
+797-          {hasSimulationData && (
+798-            <button
+799-              onClick={openInStateSpaceVisualizer}
+800-              className="px-4 py-2 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded hover:from-pink-600 hover:to-purple-600 transition-colors text-sm font-semibold shadow-md"
+801-              title="Open this simulation in the State Space Visualizer"
+802-            >
+803:              🎨 View Phase Portrait
+804-            </button>
+805-          )}
+806-          <button
+807-            onClick={exportToCSV}
+808-            className="px-3 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors text-sm"
+809-            disabled={!hasSimulationData}
+810-            title="Export time series data as CSV"
+811-          >
+812-            📊 Export CSV
+813-          </button>

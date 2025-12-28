@@ -1,0 +1,58 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/components/visualizations/VectorField.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   215→            if (showArrows) {
+   216→              drawVectorField3D(p, mapVal, stateX, stateY, stateZ, xMin, xMax, yMin, yMax, zMin, zMax, scale)
+   217→            }
+   218→
+   219→            // Draw trajectories
+   220→            trajectories.forEach((traj, idx) => {
+   221→              drawTrajectory3D(p, traj, mapVal, stateX, stateY, stateZ, idx)
+   222→            })
+   223→
+   224→            // Color legend (draw in 2D overlay)
+   225→            if (showArrows) {
+   226→              p.hint(p.DISABLE_DEPTH_TEST)
+   227→              p.camera()
+   228→              drawColorLegend(p)
+   229→              p.hint(p.ENABLE_DEPTH_TEST)
+   230→            }
+   231→          }
+   232→
+   233→          function drawColorLegend(p: any) {
+   234→            // Draw color legend in bottom-right corner
+   235→            const legendX = width - 150
+   236→            const legendY = height - 160
+   237→            const legendWidth = 120
+   238→            const legendHeight = 20
+   239→
+   240→            // Draw gradient bar
+   241→            p.noStroke()
+   242→            for (let i = 0; i < legendWidth; i++) {
+   243→              const t = i / legendWidth
+   244→              const [r, g, b] = magnitudeToColor(t, 1)
+   245→              p.fill(r, g, b)
+   246→              p.rect(legendX + i, legendY, 1, legendHeight)
+   247→            }
+   248→
+   249→            // Draw border
+   250→            p.stroke(60)
+   251→            p.strokeWeight(1)
+   252→            p.noFill()
+   253→            p.rect(legendX, legendY, legendWidth, legendHeight)
+   254→
+   255→            // Draw labels
+   256→            p.fill(60)
+   257→            p.noStroke()
+   258→            p.textSize(11)
+   259→            p.textAlign(p.LEFT, p.CENTER)
+   260→            p.text('Low', legendX, legendY - 10)
+   261→            p.textAlign(p.RIGHT, p.CENTER)
+   262→            p.text('High', legendX + legendWidth, legendY - 10)
+   263→            p.textAlign(p.CENTER, p.TOP)
+   264→            p.text('Magnitude', legendX + legendWidth / 2, legendY + legendHeight + 5)
+   265→          }
+   266→
+   267→          function drawVectorField2D(
+   268→            p: any,
+   269→            mapX: Function,
+   270→            mapY: Function,
+   271→            stateX: number,

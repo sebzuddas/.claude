@@ -1,0 +1,286 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import VisualizationLayout from '@/components/ui/VisualizationLayout'
+import SystemModel from '@/components/visualizations/SystemModel'
+import FileUploadZone from '@/components/ui/FileUploadZone'
+import MessageDisplay from '@/components/ui/MessageDisplay'
+import CodeBlock from '@/components/ui/CodeBlock'
+import { DataParser } from '@/lib/utils'
+import type { SystemModelData, FileUploadResult } from '@/types'
+
+export default function SystemModelPage() {
+  const [data, setData] = useState<SystemModelData | null>(null)
+  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' }>()
+
+  useEffect(() => {
+    // Initialize with data from URL or demo data
+    const urlData = DataParser.parseURLParams()
+
+    if (urlData.error) {
+      setMessage({ text: urlData.error, type: 'error' })
+      return
+    }
+
+    if (urlData.demo || (!urlData.data)) {
+      generateDemoData()
+      setMessage({ text: 'Demo data loaded: Mass-Spring-Damper System. Upload your own JSON file or use URL parameters.', type: 'success' })
+    } else {
+      setSystemModelData(urlData.data)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const generateDemoData = () => {
+    // Mass-Spring-Damper System
+    // States: x1 = position, x2 = velocity
+    // Input: u = force
+    // Output: y = position
+    //
+    // Equations:
+    // dx1/dt = x2
+    // dx2/dt = -(k/m)*x1 - (c/m)*x2 + (1/m)*u
+    // y = x1
+    //
+    // Parameters: m=1kg, k=2N/m, c=0.5Ns/m
+    // Discrete-time with dt=0.1s
+
+    const m = 1  // mass
+    const k = 2  // spring constant
+    const c = 0.5 // damping coefficient
+    const dt = 0.1
+
+    // Continuous: [dx1/dt] = [0    1  ] [x1] + [0  ] u
+    //             [dx2/dt]   [-k/m -c/m] [x2]   [1/m]
+    //
+    // y = [1 0] [x1] + [0] u
+    //           [x2]
+
+    // Using exact discretization would require matrix exponential
+    // For simplicity, using forward Euler: x[k+1] = (I + dt*A)*x[k] + dt*B*u[k]
+
+    const A_cont = [
+      [0, 1],
+      [-k/m, -c/m]
+    ]
+
+    const B_cont = [
+      [0],
+      [1/m]
+    ]
+
+    // Discretize using forward Euler: A_d = I + dt*A, B_d = dt*B
+    const A = [
+      [1 + dt*A_cont[0][0], dt*A_cont[0][1]],
+      [dt*A_cont[1][0], 1 + dt*A_cont[1][1]]
+    ]
+
+    const B = [
+      [dt*B_cont[0][0]],
+      [dt*B_cont[1][0]]
+    ]
+
+    const C = [[1, 0]] // Output is position
+    const D = [[0]]    // No direct feedthrough
+
+    // Initial condition: displaced by 1m, zero velocity
+    const x0 = [1, 0]
+
+    // Step input: force of 0.5N applied constantly
+    const u = [0.5]
+
+    const demoData: SystemModelData = {
+      A,
+      B,
+      C,
+      D,
+      x0,
+      u,
+      labels: {
+        states: ['Position', 'Velocity'],
+        inputs: ['Force'],
+        outputs: ['Position']
+      },
+      dt: 0.1,
+      timeHorizon: 10,
+      title: 'Mass-Spring-Damper System'
+    }
+
+    setSystemModelData(demoData)
+  }
+
+  const setSystemModelData = (newData: any) => {
+    // Validate data
+    if (!newData?.A || !Array.isArray(newData.A)) {
+      setMessage({ text: 'Invalid data: missing required "A" matrix', type: 'error' })
+      return
+    }
+    if (!newData?.B || !Array.isArray(newData.B)) {
+      setMessage({ text: 'Invalid data: missing required "B" matrix', type: 'error' })
+      return
+    }
+    if (!newData?.C || !Array.isArray(newData.C)) {
+      setMessage({ text: 'Invalid data: missing required "C" matrix', type: 'error' })
+      return
+    }
+    if (!newData?.D || !Array.isArray(newData.D)) {
+      setMessage({ text: 'Invalid data: missing required "D" matrix', type: 'error' })
+      return
+    }
+    if (!newData?.x0 || !Array.isArray(newData.x0)) {
+      setMessage({ text: 'Invalid data: missing required "x0" initial conditions', type: 'error' })
+      return
+    }
+    if (!newData?.u) {
+      setMessage({ text: 'Invalid data: missing required "u" input', type: 'error' })
+      return
+    }
+
+    setData(newData)
+    setMessage({ text: 'System model data loaded successfully!', type: 'success' })
+  }
+
+  const handleFileUpload = (result: FileUploadResult) => {
+    if (result.error) {
+      setMessage({ text: result.error, type: 'error' })
+    } else if (result.data) {
+      setSystemModelData(result.data)
+    }
+  }
+
+  const generateRCCircuitDemo = () => {
+    // RC Circuit: R=100Ω, Cap=10mF
+    // State: x = capacitor voltage
+    // Input: u = input voltage
+    // Output: y = capacitor voltage
+    //
+    // dx/dt = -1/(RC)*x + 1/(RC)*u
+    // y = x
+
+    const R = 100      // Resistance in Ω
+    const Cap = 0.01   // Capacitance in F (10mF)
+    const RC = R * Cap
+    const dt = 0.05
+
+    // Continuous: dx/dt = -1/(RC)*x + 1/(RC)*u
+    const A_cont = [[-1/RC]]
+    const B_cont = [[1/RC]]
+
+    // Discretize
+    const A = [[1 + dt*A_cont[0][0]]]
+    const B = [[dt*B_cont[0][0]]]
+    const C_mat = [[1]]
+    const D_mat = [[0]]
+
+    const x0 = [0] // Initially discharged
+    const u = [5]  // 5V step input
+
+    const demoData: SystemModelData = {
+      A,
+      B,
+      C: C_mat,
+      D: D_mat,
+      x0,
+      u,
+      labels: {
+        states: ['V_C'],
+        inputs: ['V_in'],
+        outputs: ['V_C']
+      },
+      dt: 0.05,
+      timeHorizon: 5,
+      title: 'RC Circuit (R=100Ω, C=10mF)'
+    }
+
+    setSystemModelData(demoData)
+    setMessage({ text: 'RC Circuit demo loaded!', type: 'success' })
+  }
+
+  return (
+    <VisualizationLayout
+      title="System Model Visualization"
+      description="Simulate and visualize discrete-time state-space systems with stocks and flows"
+    >
+      {/* Controls */}
+      <div className="controls">
+        <button
+          onClick={generateDemoData}
+          className="btn mr-2"
+        >
+          Mass-Spring-Damper Demo
+        </button>
+        <button
+          onClick={generateRCCircuitDemo}
+          className="btn"
+        >
+          RC Circuit Demo
+        </button>
+      </div>
+
+      {/* File Upload */}
+      <FileUploadZone
+        onFileUpload={handleFileUpload}
+        description="Drop a JSON file with state-space matrices or click to select"
+        className="w-full max-w-2xl"
+      />
+
+      {/* Message Display */}
+      {message && (
+        <MessageDisplay
+          message={message.text}
+          type={message.type}
+          onClose={() => setMessage(undefined)}
+        />
+      )}
+
+      {/* Visualization */}
+      {data && (
+        <div className="bg-white rounded-lg shadow-lg p-4">
+          <SystemModel
+            data={data}
+            onError={(error) => setMessage({ text: error, type: 'error' })}
+          />
+        </div>
+      )}
+
+      {/* Usage Instructions */}
+      <div className="mt-8 max-w-4xl">
+        <h3 className="text-lg font-semibold mb-4">Expected JSON Format:</h3>
+        <p className="text-sm text-gray-600 mb-3">
+          State-space model: <strong>x[k+1] = Ax[k] + Bu[k]</strong>, <strong>y[k] = Cx[k] + Du[k]</strong>
+        </p>
+        <CodeBlock
+          code={{
+            "A": [[0.95, 0.1], [-0.2, 0.9]],
+            "B": [[0], [0.1]],
+            "C": [[1, 0]],
+            "D": [[0]],
+            "x0": [1, 0],
+            "u": [0.5],
+            "labels": {
+              "states": ["Position", "Velocity"],
+              "inputs": ["Force"],
+              "outputs": ["Position"]
+            },
+            "dt": 0.1,
+            "timeHorizon": 10,
+            "title": "Example System"
+          }}
+        />
+
+        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+          <h4 className="font-semibold mb-2">Key Features:</h4>
+          <ul className="list-disc list-inside text-sm space-y-1">
+            <li>Neural network-style layout: inputs (left) → states (middle) → outputs (right)</li>
+            <li>Animated flow particles showing system dynamics</li>
+            <li>Playback controls: play/pause, step forward/backward, timeline scrubbing</li>
+            <li>Flow rates and connection weights displayed on arrows</li>
+            <li>+/- signs indicating positive/negative influence</li>
+            <li>Real-time value display for all stocks (states)</li>
+            <li>Set <code>timeHorizon: 0</code> for 5-minute default simulation</li>
+          </ul>
+        </div>
+      </div>
+    </VisualizationLayout>
+  )
+}

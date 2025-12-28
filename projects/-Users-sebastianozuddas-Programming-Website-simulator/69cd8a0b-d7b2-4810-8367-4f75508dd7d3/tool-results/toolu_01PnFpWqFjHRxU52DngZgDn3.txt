@@ -1,0 +1,10 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/components/visualizations/SystemModel.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   372→      if (p5) {
+   373→        p5.remove()
+   374→      }
+   375→    }
+   376→  }, [data, width, height]) // Don't include refs - they update without re-mounting!
+   377→
+   378→  // Playback control handlers
+   379→  const handlePlayPause = () => {
+   380→    if (!simulationRef.current) return

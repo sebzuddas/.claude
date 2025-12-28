@@ -1,0 +1,325 @@
+     1→# Data Visualization Platform - Next.js Edition
+     2→
+     3→## Project Overview
+     4→A modern data visualization platform built with Next.js 15, React 18, TypeScript, and P5.js. Provides interactive data visualizations including heat maps, scatter plots, particle systems, and more. Configured for static export to GitHub Pages.
+     5→
+     6→## Tech Stack
+     7→
+     8→### Frontend Framework
+     9→- **Next.js 15** - React framework with App Router
+    10→- **React 18** - UI library with hooks and modern patterns
+    11→- **TypeScript** - Type-safe development
+    12→- **Tailwind CSS** - Utility-first styling
+    13→
+    14→### Visualization
+    15→- **P5.js** - Creative coding library for visualizations
+    16→- **Client-side rendering** - All visualizations render in browser
+    17→
+    18→### Build & Deploy
+    19→- **Static Export** - `output: 'export'` for GitHub Pages
+    20→- **GitHub Pages** - Static hosting with CDN
+    21→- **No server-side dependencies** - Pure client-side application
+    22→
+    23→## Core Features
+    24→
+    25→### 1. Interactive Visualizations
+    26→- **Heat Maps** - `/heatmap` - 2D data matrices with color-coded intensity
+    27→- **Scatter Plots** - `/scatter` (planned)
+    28→- **Particle Systems** - `/particles` (planned)
+    29→- **Network Graphs** - `/network` (planned)
+    30→
+    31→### 2. Data Input Methods
+    32→1. **URL Parameters** - JSON data encoded in query string
+    33→2. **File Upload** - Drag & drop JSON files with validation
+    34→3. **PostMessage API** - For iframe embedding and external communication
+    35→4. **Demo Data** - Built-in example datasets for each visualization
+    36→
+    37→### 3. Theming & Customization
+    38→- **Color Palettes** - Multiple built-in palettes (Viridis, Plasma, Inferno, etc.)
+    39→- **Typography** - Theme-based font sizing from `color-palettes.json`
+    40→- **Responsive Design** - Adapts to different screen sizes
+    41→
+    42→## Architecture
+    43→
+    44→### Directory Structure
+    45→```
+    46→/simulator
+    47→├── src/
+    48→│   ├── app/                    # Next.js App Router pages
+    49→│   │   ├── page.tsx           # Home page / visualization gallery
+    50→│   │   ├── layout.tsx         # Root layout with metadata
+    51→│   │   ├── heatmap/
+    52→│   │   │   └── page.tsx       # Heat map visualization page
+    53→│   │   └── globals.css        # Global styles + Tailwind
+    54→│   ├── components/
+    55→│   │   ├── visualizations/
+    56→│   │   │   └── HeatMap.tsx    # P5.js heat map component
+    57→│   │   └── ui/
+    58→│   │       ├── VisualizationLayout.tsx
+    59→│   │       ├── ColorPaletteSelector.tsx
+    60→│   │       ├── FileUploadZone.tsx
+    61→│   │       └── MessageDisplay.tsx
+    62→│   ├── lib/
+    63→│   │   └── utils.ts           # Utilities (ColorUtils, DataParser, etc.)
+    64→│   ├── types/
+    65→│   │   └── index.ts           # TypeScript type definitions
+    66→│   └── public/
+    67→│       └── data/
+    68→│           └── color-palettes.json  # Theme configuration
+    69→├── backup/                     # Legacy vanilla JS version
+    70→├── next.config.js             # Next.js configuration
+    71→├── tailwind.config.ts         # Tailwind CSS configuration
+    72→└── package.json
+    73→```
+    74→
+    75→### Component Architecture
+    76→
+    77→#### HeatMap Component (`/src/components/visualizations/HeatMap.tsx`)
+    78→
+    79→**Key Implementation Details:**
+    80→- Uses P5.js in instance mode within React
+    81→- Loads theme configuration asynchronously for font sizes
+    82→- Uses `paletteRef` for color palette to avoid re-renders
+    83→- Implements `p.noLoop()` for static visualizations
+    84→- Properly cleans up P5 instances on unmount
+    85→
+    86→**Memory Leak Fix (Dec 2025):**
+    87→The component previously had an infinite loop caused by including `fontSizes` state in the useEffect dependency array while also modifying it within the effect. This created:
+    88→- Thousands of P5.js instances per second
+    89→- Runaway memory consumption (94+ GB observed)
+    90→- Browser crashes
+    91→
+    92→**Solution:**
+    93→- Removed `fontSizes` state entirely
+    94→- Font sizes loaded as local variables in the effect
+    95→- P5 sketch captures these variables in closure
+    96→- useEffect dependencies: `[data, width, height, onError]` only
+    97→- No circular dependency = no infinite loop
+    98→
+    99→**Code Pattern:**
+   100→```typescript
+   101→useEffect(() => {
+   102→  let p5: any
+   103→  let isMounted = true
+   104→
+   105→  const loadP5 = async () => {
+   106→    // Load font sizes as local variables (not state)
+   107→    let labelSize = 12
+   108→    let valueSize = 10
+   109→
+   110→    try {
+   111→      const [loadedLabelSize, loadedValueSize] = await Promise.all([
+   112→        TypographyUtils.getVisualizationFontSize('heatmap', 'labelSize'),
+   113→        TypographyUtils.getVisualizationFontSize('heatmap', 'fontSize')
+   114→      ])
+   115→      labelSize = loadedLabelSize
+   116→      valueSize = loadedValueSize
+   117→    } catch (error) {
+   118→      console.warn('Using default font sizes')
+   119→    }
+   120→
+   121→    // Create P5 sketch using local variables
+   122→    const sketch = (p: any) => {
+   123→      p.setup = () => {
+   124→        // ... setup code
+   125→        p.noLoop() // Static visualization
+   126→      }
+   127→
+   128→      p.draw = () => {
+   129→        // Uses labelSize and valueSize from closure
+   130→      }
+   131→    }
+   132→
+   133→    p5 = new P5(sketch)
+   134→  }
+   135→
+   136→  loadP5()
+   137→
+   138→  return () => {
+   139→    isMounted = false
+   140→    if (p5) p5.remove()
+   141→  }
+   142→}, [data, width, height, onError]) // No fontSizes!
+   143→```
+   144→
+   145→### Utility Classes (`/src/lib/utils.ts`)
+   146→
+   147→#### ColorUtils
+   148→- **Static color palette generation** - Viridis, Plasma, Inferno, Magma, etc.
+   149→- **Theme configuration loading** - Loads from `/data/color-palettes.json`
+   150→- **Caching** - Static properties cache theme config (bounded size, safe)
+   151→
+   152→#### TypographyUtils
+   153→- **Font size management** - Loads visualization-specific font sizes from theme
+   154→- **Fallback handling** - Returns defaults if theme loading fails
+   155→
+   156→#### DataParser
+   157→- **URL parameter parsing** - Extracts and validates JSON from query strings
+   158→- **Error handling** - Graceful fallbacks for malformed data
+   159→
+   160→#### FileHandler
+   161→- **Drag & drop support** - File upload with validation
+   162→- **JSON parsing** - Client-side JSON validation
+   163→- **Cleanup functions** - Returns cleanup function for event listeners
+   164→
+   165→### Data Flow
+   166→
+   167→1. **Page Load**
+   168→   - Next.js renders page component
+   169→   - Checks URL parameters via `DataParser.parseURLParams()`
+   170→   - Loads demo data if no URL data provided
+   171→
+   172→2. **User Uploads File**
+   173→   - `FileUploadZone` handles drag/drop or click to upload
+   174→   - Validates JSON structure
+   175→   - Calls `onFileUpload` callback with parsed data
+   176→
+   177→3. **Visualization Renders**
+   178→   - React component receives data prop
+   179→   - useEffect loads P5.js dynamically (code splitting)
+   180→   - Loads theme config (fonts, colors)
+   181→   - Creates P5 instance with sketch
+   182→   - P5 renders visualization on canvas
+   183→
+   184→4. **Palette Change**
+   185→   - Separate useEffect watches `colorPalette` prop
+   186→   - Loads new palette data
+   187→   - Updates `paletteRef.current`
+   188→   - Calls `p5Instance.updateDisplay()` to redraw
+   189→
+   190→## JSON Data Formats
+   191→
+   192→### Heat Map Data
+   193→```json
+   194→{
+   195→  "data": [[1, 2, 3], [4, 5, 6], [7, 8, 9]],
+   196→  "labels": {
+   197→    "x": ["A", "B", "C"],
+   198→    "y": ["Row 1", "Row 2", "Row 3"]
+   199→  },
+   200→  "colorScale": "viridis",
+   201→  "title": "Sample Heat Map"
+   202→}
+   203→```
+   204→
+   205→### Color Palette Theme Config
+   206→Located at `/public/data/color-palettes.json`:
+   207→```json
+   208→{
+   209→  "palettes": {
+   210→    "viridis": { "type": "sequential", "colors": 256 },
+   211→    "plasma": { "type": "sequential", "colors": 256 }
+   212→  },
+   213→  "typography": {
+   214→    "heatmap": {
+   215→      "titleSize": 24,
+   216→      "labelSize": 14,
+   217→      "fontSize": 12
+   218→    }
+   219→  }
+   220→}
+   221→```
+   222→
+   223→## Performance Considerations
+   224→
+   225→### Memory Management
+   226→- **P5 Instance Cleanup** - Always call `p5.remove()` in useEffect cleanup
+   227→- **Avoid State in Dependencies** - Don't include state that's modified within the effect
+   228→- **Use Refs for Mutable Data** - `paletteRef` used instead of state to prevent re-renders
+   229→- **Static Visualizations** - Call `p.noLoop()` for non-animated visualizations
+   230→
+   231→### Best Practices
+   232→1. **Load P5 dynamically** - `await import('p5')` for code splitting
+   233→2. **Use local variables** - For data that doesn't need to trigger re-renders
+   234→3. **Cleanup event listeners** - Remove all listeners in useEffect return function
+   235→4. **Monitor dependencies** - Only include values that should trigger re-creation
+   236→
+   237→### Common Pitfalls
+   238→❌ **DON'T**: Include state in dependencies if you modify it in the effect
+   239→```typescript
+   240→useEffect(() => {
+   241→  setFontSize(20) // Modifies state
+   242→}, [fontSize]) // Depends on it = INFINITE LOOP
+   243→```
+   244→
+   245→✅ **DO**: Use local variables or refs
+   246→```typescript
+   247→useEffect(() => {
+   248→  let fontSize = 20
+   249→  // Load async...
+   250→  fontSize = loadedSize
+   251→  // Use in sketch closure
+   252→}, [data]) // Only depends on data
+   253→```
+   254→
+   255→## Development Workflow
+   256→
+   257→### Local Development
+   258→```bash
+   259→npm run dev       # Start dev server on localhost:3000
+   260→npm run build     # Build for production
+   261→npm run lint      # Run ESLint
+   262→```
+   263→
+   264→### Static Export
+   265→```bash
+   266→npm run build     # Creates /out directory
+   267→npm run export    # Alias for build (configured in next.config.js)
+   268→```
+   269→
+   270→### Deployment
+   271→- **GitHub Pages** - Push to `gh-pages` branch or use GitHub Actions
+   272→- **Static hosting** - All files in `/out` can be served from any static host
+   273→- **Base path** - Configure `basePath` in `next.config.js` for subdirectory hosting
+   274→
+   275→## Browser Compatibility
+   276→- **Modern browsers** - Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
+   277→- **ES modules** - Native ESM support required
+   278→- **Canvas/WebGL** - P5.js requires canvas API
+   279→- **Async/await** - Modern JavaScript features throughout
+   280→
+   281→## Known Issues & Solutions
+   282→
+   283→### Issue: Memory Leak in P5 Components
+   284→**Symptom**: Browser memory grows to 10s of GB
+   285→**Cause**: Infinite useEffect loop creating P5 instances
+   286→**Solution**: Remove state variables from dependencies if modified within effect
+   287→
+   288→### Issue: Font Sizes Not Loading
+   289→**Symptom**: Default font sizes used instead of theme values
+   290→**Cause**: Async loading completes after P5 instance created
+   291→**Solution**: Load theme config before creating sketch, use local variables
+   292→
+   293→### Issue: Palette Not Updating
+   294→**Symptom**: Changing palette doesn't update visualization
+   295→**Cause**: P5 sketch doesn't re-run on palette change
+   296→**Solution**: Separate useEffect watches palette, calls `p5Instance.updateDisplay()`
+   297→
+   298→## Future Enhancements
+   299→- [ ] Add more visualization types (scatter, network, particle systems)
+   300→- [ ] Implement WebAssembly for computationally intensive visualizations
+   301→- [ ] Add export functionality (PNG, SVG, PDF)
+   302→- [ ] Real-time data streaming via WebSocket
+   303→- [ ] Collaborative features with shareable URLs
+   304→- [ ] Animation controls for time-series data
+   305→- [ ] 3D visualizations with WebGL
+   306→- [ ] Accessibility improvements (ARIA labels, keyboard navigation)
+   307→
+   308→## Contributing
+   309→When modifying P5.js components:
+   310→1. Always test memory usage in browser DevTools
+   311→2. Ensure useEffect dependencies are correct
+   312→3. Call `p.remove()` in cleanup function
+   313→4. Use refs for data that shouldn't trigger re-renders
+   314→5. Document async loading patterns
+   315→
+   316→## Resources
+   317→- [Next.js Documentation](https://nextjs.org/docs)
+   318→- [P5.js Reference](https://p5js.org/reference/)
+   319→- [React Hooks](https://react.dev/reference/react)
+   320→- [Tailwind CSS](https://tailwindcss.com/docs)
+   321→
+
+<system-reminder>
+Whenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.
+</system-reminder>

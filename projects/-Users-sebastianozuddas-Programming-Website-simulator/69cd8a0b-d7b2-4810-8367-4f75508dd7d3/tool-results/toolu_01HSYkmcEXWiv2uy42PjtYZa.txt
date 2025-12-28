@@ -1,0 +1,11 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/lib/abm/core/simulation.ts has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   632→
+   633→    const spatialIndex = this.world.getSpatialIndex()
+   634→    if (spatialIndex.type !== 'grid2D') return
+   635→
+   636→    const gridIndex = spatialIndex as Grid2DSpatialIndex
+   637→    const updates: Array<{ entity: EntityClass; nextState: { alive: boolean } }> = []
+   638→
+   639→    for (const entity of entities) {
+   640→      const entityObj = entity as EntityClass
+   641→      const position = entityObj.getComponent<Vector2D>('Position')

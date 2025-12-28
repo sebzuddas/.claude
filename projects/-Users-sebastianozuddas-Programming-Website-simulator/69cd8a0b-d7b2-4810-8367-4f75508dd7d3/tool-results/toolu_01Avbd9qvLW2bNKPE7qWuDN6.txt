@@ -1,0 +1,23 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/CLAUDE.md has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+  1486→- Navigation: how to link from other pages (if at all)?
+  1487→- Homepage listing: should it be in "System Models" or "Visualizations"?
+  1488→- Data flow: can ABM results be exported to other visualizers?
+  1489→
+  1490→**Your Answer**:
+  1491→Requirements:
+  1492→1. The page structure shall be similar to `/vectorfield` and `/systemmodel`.
+  1493→2. There shall be a file upload zone for the JSON configuration.
+  1494→3. There shall be a preloaded example, namely Schellings segregation model, Conways game of life, and the predator prey system.
+  1495→4. The homepage listing shall be under system models.
+  1496→5. ABM results can be exported to other visualisers.
+  1497→6. Page layout (top to bottom):
+  1498→   1. Demo selector and file upload zone
+  1499→   2. Simulation canvas (full width)
+  1500→   3. Model Info section (below simulation, showing purpose, agent count, dt)
+  1501→   4. Two timeseries graphs (aggregate population dynamics and individual agent metrics)
+  1502→   5. Instructions panel
+  1503→   6. Expected JSON Format section with example code block (like other visualization pages) 
+  1504→
+  1505→---
+  1506→
+  1507→### 11. Extensibility & Plugin System

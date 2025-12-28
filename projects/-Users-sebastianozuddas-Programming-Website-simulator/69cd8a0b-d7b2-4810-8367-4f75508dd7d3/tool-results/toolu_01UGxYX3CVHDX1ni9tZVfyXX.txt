@@ -1,0 +1,11 @@
+    15→ ✓ Compiled in 133ms (300 modules)
+    16→ ✓ Compiled in 671ms (300 modules)
+    17→ ✓ Compiled in 285ms (300 modules)
+    18→ ✓ Compiled in 198ms (300 modules)
+    19→ ✓ Compiled in 171ms (300 modules)
+    20→ ✓ Compiled in 409ms (300 modules)
+    21→
+
+<system-reminder>
+Whenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.
+</system-reminder>

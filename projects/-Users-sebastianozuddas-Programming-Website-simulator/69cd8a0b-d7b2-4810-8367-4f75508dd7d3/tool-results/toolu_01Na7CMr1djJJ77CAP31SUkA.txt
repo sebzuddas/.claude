@@ -1,0 +1,29 @@
+    38→
+    39→export default function ABMPage() {
+    40→  // State
+    41→  const [model, setModel] = useState<ABMModelDefinition | null>(null)
+    42→  const [simState, setSimState] = useState<SimulationState | null>(null)
+    43→  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' }>()
+    44→  const [timeseries, setTimeseries] = useState<Map<string, TimeseriesData>>(new Map())
+    45→  const [inspectedEntity, setInspectedEntity] = useState<InspectedEntity | null>(null)
+    46→  const [selectedDemo, setSelectedDemo] = useState<string>('flocking')
+    47→  const [showTrails, setShowTrails] = useState(false)
+    48→  const [speed, setSpeed] = useState(1)
+    49→
+    50→  // Refs
+    51→  const containerRef = useRef<HTMLDivElement>(null)
+    52→  const controllerRef = useRef<SimulationController | null>(null)
+    53→  const rendererRef = useRef<ABMRenderer | null>(null)
+    54→  const animationFrameRef = useRef<number | null>(null)
+    55→  const lastTickTimeRef = useRef<number>(0)
+    56→
+    57→  // Demo models map
+    58→  const demoModels: Record<string, ABMModelDefinition> = {
+    59→    flocking: FLOCKING_MODEL,
+    60→    sir: SIR_MODEL,
+    61→    predatorPrey: PREDATOR_PREY_MODEL
+    62→  }
+
+<system-reminder>
+Whenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.
+</system-reminder>

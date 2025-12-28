@@ -1,0 +1,26 @@
+29:- **Time Series** - `/timeseries` - Data changes over time
+1046:## PLANNING: Agent-Based Modeling (ABM) Simulator
+1049:Create a general-purpose agent-based modeling platform that can simulate diverse systems (social, transport, ecological, etc.) from JSON configuration files. Support both visualized and non-visualized (fast) execution modes. Use a flexible framework based on: Environment + Agents + Interaction Rules.
+1051:The ABM simulator is strictly 2D. 
+1061:**Question**: How should we structure the ABM framework to maximize generality while remaining practical?
+1226:   6. `emit`: Emit an event for logging/observation.
+1267:- Example ABM types to support initially:
+1297:   4. `observation`: What data to collect for output/visualization.
+1374:- ~~2D vs 3D visualization (is 3D necessary for any ABM types)?~~
+1388:5. The agent-based model simulator is strictly 2D. 
+1396:   1. The user shall be able to view two timeseries plots in two vertical windows below the simulation. 
+1397:   2. The first timeseries plot shall focus on the large-scale simulation, and should have tickboxes which determine which states to visualise. 
+1398:   3. The second timeseries plot shall focus on the individual agents. 
+1423:- Output options: final state only vs periodic snapshots vs full timeseries?
+1443:- Export formats: JSON (full state), CSV (timeseries), images/video (visualization)?
+1445:- Metrics specific to ABM type (e.g., clustering coefficient for social networks)?
+1450:1. The JSON shall define an `observation` section specifying what data to collect:
+1453:     "observation": {
+1454:       "timeseries": [
+1468:   1. **JSON**: Full simulation state or timeseries.
+1480:**Question**: How does ABM fit into the current visualization platform?
+1488:- Data flow: can ABM results be exported to other visualizers?
+1496:5. ABM results can be exported to other visualisers. 
+1517:   2. The primitives library shall be comprehensive enough that most ABM behaviors are expressible.
+1566:- Educational value: can examples teach ABM concepts?
+1672:- Type safety: TypeScript interfaces for all ABM components?

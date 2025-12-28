@@ -1,0 +1,104 @@
+   234→#### StateSpaceVisualization Component (`/src/components/visualizations/StateSpaceVisualization.tsx`)
+   235→
+   236→**Purpose**: Displays phase portraits (state vs state plots) from time series data.
+   237→
+   238→**Key Features:**
+   239→- **Multi-plot grid** - Shows all state pairs (upper triangle only)
+   240→- **Interactive state selection** - Toggle which states to visualize
+   241→- **Trajectory trails** - Adjustable length showing recent history
+   242→- **Current point tracking** - Red dot shows current position
+   243→- **Complete trajectory** - Faint gray line shows full path
+   244→- **Dual format support** - Accepts simple JSON or System Simulator exports
+   245→
+   246→**Data Integration:**
+   247→```typescript
+   248→// Accepts System Simulator export format
+   249→interface SystemSimulatorExport {
+   250→  metadata?: { title, dt, timeHorizon }
+   251→  system?: { A, B, C, D, labels }
+   252→  results: { t, x, u, y }  // Extract x and t for phase portrait
+   253→}
+   254→
+   255→// Or simple format
+   256→interface StateSpaceData {
+   257→  t: number[]
+   258→  x: number[][]  // [timeStep][stateIndex]
+   259→  labels?: string[]
+   260→  title?: string
+   261→}
+   262→```
+   263→
+   264→**SessionStorage Integration:**
+   265→Seamless navigation from System Simulator:
+   266→```typescript
+   267→// In SystemModel.tsx
+   268→const openInStateSpaceVisualizer = () => {
+   269→  const stateSpaceData = {
+   270→    t: simulationRef.current.t,
+   271→    x: simulationRef.current.x,
+   272→    labels: data.labels?.states,
+   273→    title: data.title
+   274→  }
+   275→  sessionStorage.setItem('stateSpaceData', JSON.stringify(stateSpaceData))
+   276→  router.push('/statespace')
+   277→}
+   278→
+   279→// In statespace/page.tsx
+   280→useEffect(() => {
+   281→  const sessionData = sessionStorage.getItem('stateSpaceData')
+   282→  if (sessionData) {
+   283→    const parsedData = JSON.parse(sessionData)
+   284→    setStateSpaceData(parsedData)
+   285→    sessionStorage.removeItem('stateSpaceData') // Clear after use
+   286→  }
+   287→}, [])
+   288→```
+   289→
+   290→**Grid Layout Calculation:**
+   291→For n selected states, shows n(n-1)/2 plots (upper triangle):
+   292→```typescript
+   293→const plotsPerRow = Math.ceil(Math.sqrt(gridSize * (gridSize - 1) / 2))
+   294→const plotWidth = width / plotsPerRow
+   295→const plotHeight = height / Math.ceil((gridSize * (gridSize - 1) / 2) / plotsPerRow)
+   296→
+   297→// Draw only i < j pairs
+   298→for (let i = 0; i < selected.length; i++) {
+   299→  for (let j = i + 1; j < selected.length; j++) {
+   300→    drawPhasePlot(stateI, stateJ, ...)
+   301→  }
+   302→}
+   303→```
+   304→
+   305→### Utility Classes (`/src/lib/utils.ts`)
+   306→
+   307→#### ColorUtils
+   308→- **Static color palette generation** - Viridis, Plasma, Inferno, Magma, etc.
+   309→- **Theme configuration loading** - Loads from `/data/color-palettes.json`
+   310→- **Caching** - Static properties cache theme config (bounded size, safe)
+   311→
+   312→#### TypographyUtils
+   313→- **Font size management** - Loads visualization-specific font sizes from theme
+   314→- **Fallback handling** - Returns defaults if theme loading fails
+   315→
+   316→#### DataParser
+   317→- **URL parameter parsing** - Extracts and validates JSON from query strings
+   318→- **Error handling** - Graceful fallbacks for malformed data
+   319→
+   320→#### FileHandler
+   321→- **Drag & drop support** - File upload with validation
+   322→- **JSON parsing** - Client-side JSON validation
+   323→- **Cleanup functions** - Returns cleanup function for event listeners
+   324→
+   325→### Data Flow
+   326→
+   327→1. **Page Load**
+   328→   - Next.js renders page component
+   329→   - Checks URL parameters via `DataParser.parseURLParams()`
+   330→   - Loads demo data if no URL data provided
+   331→
+   332→2. **User Uploads File**
+   333→   - `FileUploadZone` handles drag/drop or click to upload
+
+<system-reminder>
+Whenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.
+</system-reminder>

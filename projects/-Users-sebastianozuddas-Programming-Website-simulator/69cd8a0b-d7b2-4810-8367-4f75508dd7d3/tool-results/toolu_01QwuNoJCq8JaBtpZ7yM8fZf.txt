@@ -1,0 +1,62 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/types/index.ts has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+    85→export interface FlockingData extends FlockingConfig {
+    86→  // Alias for consistency with other visualization data types
+    87→}
+    88→
+    89→export interface SystemModelData {
+    90→  A: number[][];  // State matrix (n×n)
+    91→  B: number[][];  // Input matrix (n×m)
+    92→  C: number[][];  // Output matrix (p×n)
+    93→  D: number[][];  // Feedthrough matrix (p×m)
+    94→  x0: number[];   // Initial conditions
+    95→  u: number[] | number[][];  // Input sequence (constant or time-varying)
+    96→  labels?: {
+    97→    states?: string[];   // State variable names
+    98→    inputs?: string[];   // Input names
+    99→    outputs?: string[];  // Output names
+   100→  };
+   101→  dt?: number;          // Time step (default: 0.1)
+   102→  timeHorizon?: number; // Simulation time (0 = 300s default)
+   103→  title?: string;
+   104→}
+   105→
+   106→// State space visualization data (simple format)
+   107→export interface StateSpaceData {
+   108→  t: number[];           // Time points
+   109→  x: number[][];         // State trajectories [timeStep][stateIndex]
+   110→  labels?: string[];     // State labels
+   111→  title?: string;        // Title for the visualization
+   112→}
+   113→
+   114→// Complete export format from system simulator
+   115→export interface SystemSimulatorExport {
+   116→  metadata?: {
+   117→    title?: string;
+   118→    dt?: number;
+   119→    timeHorizon?: number;
+   120→    exportDate?: string;
+   121→  };
+   122→  system?: {
+   123→    A: number[][];
+   124→    B: number[][];
+   125→    C: number[][];
+   126→    D: number[][];
+   127→    x0: number[];
+   128→    u: number[] | number[][];
+   129→    labels?: {
+   130→      states?: string[];
+   131→      inputs?: string[];
+   132→      outputs?: string[];
+   133→    };
+   134→  };
+   135→  results: {
+   136→    t: number[];
+   137→    x: number[][];
+   138→    u: number[][];
+   139→    y: number[][];
+   140→  };
+   141→}
+   142→
+   143→export interface ColorPalette {
+   144→  name: string;
+   145→  description?: string;

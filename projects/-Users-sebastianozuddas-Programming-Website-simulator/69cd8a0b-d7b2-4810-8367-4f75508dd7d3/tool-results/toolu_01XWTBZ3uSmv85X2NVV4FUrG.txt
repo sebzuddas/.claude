@@ -1,0 +1,54 @@
+   590→      } else if ('onProximity' in rule.trigger) {
+   591→        const radius = rule.trigger.onProximity.radius
+   592→        for (const entity of applicableEntities) {
+   593→          const entityObj = entity as EntityClass
+   594→          const position = entityObj.getComponent<Vector2D>('Position')
+   595→          if (!position) continue
+   596→
+   597→          const neighbors = SpatialPrimitives.withinRadius(
+   598→            this.world,
+   599→            position,
+   600→            radius,
+   601→            e => e.id !== entityObj.id
+   602→          )
+   603→
+   604→          // Apply filter if specified
+   605→          let filtered = neighbors
+   606→          if (rule.trigger.onProximity.filter) {
+   607→            filtered = neighbors.filter(n =>
+   608→              this.evaluateConditionForEntity(rule.trigger.onProximity.filter!, entityObj, n as EntityClass)
+   609→            )
+   610→          }
+   611→
+   612→          for (const other of filtered) {
+   613→            const effects = this.evaluateRuleForEntity(rule, entityObj, dt, other as EntityClass)
+   614→            if (effects) allEffects.push(effects)
+   615→          }
+   616→        }
+   617→      }
+   618→    }
+   619→
+   620→    // Apply all effects
+   621→    this.applyEffects(allEffects)
+   622→  }
+   623→
+   624→  /**
+   625→   * Execute grid update system (for cellular automata)
+   626→   */
+   627→  private executeGridUpdateSystem(entities: Entity[], dt: number): void {
+   628→    // For grid-based simulations, calculate next state based on neighbors
+   629→    // This is specialized for Game of Life style simulations
+   630→    if (!this.world) return
+   631→
+   632→    const spatialIndex = this.world.getSpatialIndex()
+   633→    if (spatialIndex.type !== 'grid2D') return
+   634→
+   635→    const gridIndex = spatialIndex as Grid2DSpatialIndex
+   636→    const updates: Array<{ entity: EntityClass; nextState: unknown }> = []
+   637→
+   638→    for (const entity of entities) {
+   639→      const entityObj = entity as EntityClass
+
+<system-reminder>
+Whenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.
+</system-reminder>

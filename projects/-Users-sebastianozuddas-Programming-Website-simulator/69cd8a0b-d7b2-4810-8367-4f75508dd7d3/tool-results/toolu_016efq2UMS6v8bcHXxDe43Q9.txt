@@ -1,0 +1,107 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/components/visualizations/SystemModel.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   651→    setCurrentTimeIndex(0)
+   652→    setIsPlaying(false)
+   653→  }
+   654→
+   655→  const handleScrub = (e: React.ChangeEvent<HTMLInputElement>) => {
+   656→    const value = parseInt(e.target.value)
+   657→    setCurrentTimeIndex(value)
+   658→  }
+   659→
+   660→  const exportToCSV = () => {
+   661→    if (!simulationRef.current) return
+   662→
+   663→    const sim = simulationRef.current
+   664→    const { t, x, u, y } = sim
+   665→
+   666→    // Build CSV header
+   667→    const stateLabels = data.labels?.states || x[0].map((_, i) => `x${i + 1}`)
+   668→    const inputLabels = data.labels?.inputs || u[0].map((_, i) => `u${i + 1}`)
+   669→    const outputLabels = data.labels?.outputs || y[0].map((_, i) => `y${i + 1}`)
+   670→
+   671→    const header = ['time', ...stateLabels, ...inputLabels, ...outputLabels].join(',')
+   672→
+   673→    // Build CSV rows
+   674→    const rows = t.map((time, i) => {
+   675→      const row = [
+   676→        time.toFixed(6),
+   677→        ...x[i].map(v => v.toFixed(6)),
+   678→        ...u[i].map(v => v.toFixed(6)),
+   679→        ...y[i].map(v => v.toFixed(6))
+   680→      ]
+   681→      return row.join(',')
+   682→    })
+   683→
+   684→    const csv = [header, ...rows].join('\n')
+   685→
+   686→    // Download file
+   687→    const blob = new Blob([csv], { type: 'text/csv' })
+   688→    const url = URL.createObjectURL(blob)
+   689→    const a = document.createElement('a')
+   690→    a.href = url
+   691→    a.download = `${data.title || 'simulation'}_results.csv`
+   692→    a.click()
+   693→    URL.revokeObjectURL(url)
+   694→  }
+   695→
+   696→  const exportToJSON = () => {
+   697→    if (!simulationRef.current) return
+   698→
+   699→    const exportData = {
+   700→      metadata: {
+   701→        title: data.title,
+   702→        dt: data.dt,
+   703→        timeHorizon: data.timeHorizon,
+   704→        exportDate: new Date().toISOString()
+   705→      },
+   706→      system: {
+   707→        A: data.A,
+   708→        B: data.B,
+   709→        C: data.C,
+   710→        D: data.D,
+   711→        x0: data.x0,
+   712→        u: data.u,
+   713→        labels: data.labels
+   714→      },
+   715→      results: {
+   716→        t: simulationRef.current.t,
+   717→        x: simulationRef.current.x,
+   718→        u: simulationRef.current.u,
+   719→        y: simulationRef.current.y
+   720→      }
+   721→    }
+   722→
+   723→    const json = JSON.stringify(exportData, null, 2)
+   724→    const blob = new Blob([json], { type: 'application/json' })
+   725→    const url = URL.createObjectURL(blob)
+   726→    const a = document.createElement('a')
+   727→    a.href = url
+   728→    a.download = `${data.title || 'simulation'}_complete.json`
+   729→    a.click()
+   730→    URL.revokeObjectURL(url)
+   731→  }
+   732→
+   733→  const copyCurrentState = () => {
+   734→    if (!simulationRef.current) return
+   735→
+   736→    const sim = simulationRef.current
+   737→    const currentState = {
+   738→      time: sim.t[currentTimeIndex],
+   739→      states: sim.x[currentTimeIndex],
+   740→      inputs: sim.u[currentTimeIndex],
+   741→      outputs: sim.y[currentTimeIndex],
+   742→      labels: data.labels
+   743→    }
+   744→
+   745→    navigator.clipboard.writeText(JSON.stringify(currentState, null, 2))
+   746→      .then(() => alert('Current state copied to clipboard!'))
+   747→      .catch(err => console.error('Failed to copy:', err))
+   748→  }
+   749→
+   750→  return (
+   751→    <div className="w-full">
+   752→      <div ref={canvasRef} />
+   753→
+   754→      {/* Playback Controls */}
+   755→      <div ref={controlsRef} className="mt-4 p-4 bg-gray-100 rounded-lg">
+   756→        <div className="flex items-center justify-center gap-4 mb-3">

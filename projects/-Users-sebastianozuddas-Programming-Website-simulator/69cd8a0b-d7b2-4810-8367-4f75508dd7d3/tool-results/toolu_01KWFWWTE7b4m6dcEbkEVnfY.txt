@@ -1,0 +1,104 @@
+   629→  return (
+   630→    <div className="w-full">
+   631→      <div ref={canvasRef} />
+   632→
+   633→      {/* Controls */}
+   634→      <div className="mt-4 p-4 bg-gray-100 rounded-lg">
+   635→        {/* Display options */}
+   636→        <div className="flex items-center justify-center gap-4 mb-4 pb-3 border-b border-gray-300">
+   637→          <button
+   638→            onClick={() => setShowArrows(!showArrows)}
+   639→            className={`px-4 py-2 rounded transition-colors ${
+   640→              showArrows ? 'bg-blue-500 text-white' : 'bg-gray-300'
+   641→            }`}
+   642→          >
+   643→            {showArrows ? '✓ Arrows' : 'Arrows'}
+   644→          </button>
+   645→
+   646→          <button
+   647→            onClick={handleClearTrajectories}
+   648→            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+   649→            disabled={trajectories.length === 0}
+   650→          >
+   651→            Clear Trajectories ({trajectories.length}/2)
+   652→          </button>
+   653→        </div>
+   654→
+   655→        {/* Playback controls */}
+   656→        {trajectories.length > 0 && (
+   657→          <>
+   658→            <div className="flex items-center justify-center gap-4 mb-3">
+   659→              <button
+   660→                onClick={handleReset}
+   661→                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
+   662→              >
+   663→                Reset
+   664→              </button>
+   665→
+   666→              <button
+   667→                onClick={handlePlayPause}
+   668→                className="px-6 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors font-semibold"
+   669→              >
+   670→                {isPlaying ? 'Pause' : 'Play'}
+   671→              </button>
+   672→            </div>
+   673→
+   674→            {/* Timeline scrubber */}
+   675→            <div className="w-full">
+   676→              <input
+   677→                type="range"
+   678→                min={0}
+   679→                max={maxTimeSteps - 1}
+   680→                value={currentTimeIndex}
+   681→                onChange={handleScrub}
+   682→                className="w-full"
+   683→              />
+   684→              <div className="flex justify-between text-xs text-gray-600 mt-1">
+   685→                <span>t = 0s</span>
+   686→                {trajectories.length > 0 && (
+   687→                  <span>
+   688→                    t = {trajectories[0].t[Math.min(currentTimeIndex, trajectories[0].t.length - 1)]?.toFixed(2) || 0}s
+   689→                  </span>
+   690→                )}
+   691→              </div>
+   692→            </div>
+   693→          </>
+   694→        )}
+   695→
+   696→        {data.dimension === 2 && (
+   697→          <div className="mt-4 text-sm text-gray-600 text-center">
+   698→            Click on the vector field to add a trajectory (max 2)
+   699→          </div>
+   700→        )}
+   701→      </div>
+   702→    </div>
+   703→  )
+   704→}
+   705→
+   706→// Utility: Calculate bounds from system characteristics
+   707→function calculateBounds(data: VectorFieldData): { min: number[], max: number[] } {
+   708→  if (data.A) {
+   709→    // Linear system: estimate based on A matrix
+   710→    const n = data.A.length
+   711→    let maxVal = 0
+   712→
+   713→    // Find max absolute value in A
+   714→    for (let i = 0; i < n; i++) {
+   715→      for (let j = 0; j < n; j++) {
+   716→        maxVal = Math.max(maxVal, Math.abs(data.A[i][j]))
+   717→      }
+   718→    }
+   719→
+   720→    const bound = Math.max(5, maxVal * 3)
+   721→    return {
+   722→      min: new Array(n).fill(-bound),
+   723→      max: new Array(n).fill(bound)
+   724→    }
+   725→  }
+   726→
+   727→  // Default bounds for nonlinear or unknown systems
+   728→  const n = data.dimension === 3 ? 3 : 2
+
+<system-reminder>
+Whenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.
+</system-reminder>

@@ -1,0 +1,104 @@
+     1→'use client'
+     2→
+     3→import { useState, useEffect } from 'react'
+     4→import VisualizationLayout from '@/components/ui/VisualizationLayout'
+     5→import SystemModel from '@/components/visualizations/SystemModel'
+     6→import FileUploadZone from '@/components/ui/FileUploadZone'
+     7→import MessageDisplay from '@/components/ui/MessageDisplay'
+     8→import CodeBlock from '@/components/ui/CodeBlock'
+     9→import { DataParser } from '@/lib/utils'
+    10→import type { SystemModelData, FileUploadResult } from '@/types'
+    11→
+    12→export default function SystemModelPage() {
+    13→  const [data, setData] = useState<SystemModelData | null>(null)
+    14→  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' }>()
+    15→
+    16→  useEffect(() => {
+    17→    // Initialize with data from URL or demo data
+    18→    const urlData = DataParser.parseURLParams()
+    19→
+    20→    if (urlData.error) {
+    21→      setMessage({ text: urlData.error, type: 'error' })
+    22→      return
+    23→    }
+    24→
+    25→    if (urlData.demo || (!urlData.data)) {
+    26→      generateDemoData()
+    27→      setMessage({ text: 'Demo data loaded: Mass-Spring-Damper System. Upload your own JSON file or use URL parameters.', type: 'success' })
+    28→    } else {
+    29→      setSystemModelData(urlData.data)
+    30→    }
+    31→    // eslint-disable-next-line react-hooks/exhaustive-deps
+    32→  }, [])
+    33→
+    34→  const generateDemoData = () => {
+    35→    // Mass-Spring-Damper System
+    36→    // States: x1 = position, x2 = velocity
+    37→    // Input: u = force
+    38→    // Output: y = position
+    39→    //
+    40→    // Equations:
+    41→    // dx1/dt = x2
+    42→    // dx2/dt = -(k/m)*x1 - (c/m)*x2 + (1/m)*u
+    43→    // y = x1
+    44→    //
+    45→    // Parameters: m=1kg, k=2N/m, c=0.5Ns/m
+    46→    // Discrete-time with dt=0.1s
+    47→
+    48→    const m = 1  // mass
+    49→    const k = 2  // spring constant
+    50→    const c = 0.5 // damping coefficient
+    51→    const dt = 0.1
+    52→
+    53→    // Continuous: [dx1/dt] = [0    1  ] [x1] + [0  ] u
+    54→    //             [dx2/dt]   [-k/m -c/m] [x2]   [1/m]
+    55→    //
+    56→    // y = [1 0] [x1] + [0] u
+    57→    //           [x2]
+    58→
+    59→    // Using exact discretization would require matrix exponential
+    60→    // For simplicity, using forward Euler: x[k+1] = (I + dt*A)*x[k] + dt*B*u[k]
+    61→
+    62→    const A_cont = [
+    63→      [0, 1],
+    64→      [-k/m, -c/m]
+    65→    ]
+    66→
+    67→    const B_cont = [
+    68→      [0],
+    69→      [1/m]
+    70→    ]
+    71→
+    72→    // Discretize using forward Euler: A_d = I + dt*A, B_d = dt*B
+    73→    const A = [
+    74→      [1 + dt*A_cont[0][0], dt*A_cont[0][1]],
+    75→      [dt*A_cont[1][0], 1 + dt*A_cont[1][1]]
+    76→    ]
+    77→
+    78→    const B = [
+    79→      [dt*B_cont[0][0]],
+    80→      [dt*B_cont[1][0]]
+    81→    ]
+    82→
+    83→    const C = [[1, 0]] // Output is position
+    84→    const D = [[0]]    // No direct feedthrough
+    85→
+    86→    // Initial condition: displaced by 1m, zero velocity
+    87→    const x0 = [1, 0]
+    88→
+    89→    // Step input: force of 0.5N applied constantly
+    90→    const u = [0.5]
+    91→
+    92→    const demoData: SystemModelData = {
+    93→      A,
+    94→      B,
+    95→      C,
+    96→      D,
+    97→      x0,
+    98→      u,
+    99→      labels: {
+   100→        states: ['Position', 'Velocity'],
+
+<system-reminder>
+Whenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.
+</system-reminder>

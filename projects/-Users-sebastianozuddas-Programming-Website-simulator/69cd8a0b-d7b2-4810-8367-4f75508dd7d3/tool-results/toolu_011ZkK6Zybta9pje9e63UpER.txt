@@ -1,0 +1,19 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/app/abm/page.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   349→          onClose={() => setMessage(undefined)}
+   350→        />
+   351→      )}
+   352→
+   353→      {/* Simulation Canvas */}
+   354→      <div className="w-full max-w-4xl">
+   355→        <div className="bg-gray-900 rounded-lg overflow-hidden relative flex justify-center">
+   356→          {/* Canvas Container */}
+   357→          <div
+   358→            ref={containerRef}
+   359→            onClick={handleCanvasClick}
+   360→            className="cursor-crosshair"
+   361→            style={{ minHeight: 400 }}
+   362→          />
+   363→
+   364→          {/* Controls Overlay */}
+   365→          <div className="absolute bottom-4 left-4 right-4 flex flex-wrap gap-2 items-center bg-black/50 rounded-lg p-3">
+   366→            {/* Playback */}

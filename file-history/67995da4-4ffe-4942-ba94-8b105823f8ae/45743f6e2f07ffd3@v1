@@ -1,0 +1,655 @@
+'use client'
+
+import { useEffect, useRef, useState } from 'react'
+import type { NetworkGraphData, VisualizationProps } from '@/types'
+
+interface NetworkGraphProps extends VisualizationProps {
+  data: NetworkGraphData
+}
+
+export default function NetworkGraph({
+  data,
+  width = 900,
+  height = 600,
+  onError
+}: NetworkGraphProps) {
+  const canvasRef = useRef<HTMLDivElement>(null)
+  const [p5Instance, setP5Instance] = useState<any>(null)
+
+  // Control states
+  const [repulsionStrength, setRepulsionStrength] = useState(5000)
+  const [attractionStrength, setAttractionStrength] = useState(0.01)
+  const [damping, setDamping] = useState(0.85)
+  const [nodeSize, setNodeSize] = useState(10)
+  const [showLabels, setShowLabels] = useState(true)
+  const [showEdgeLabels, setShowEdgeLabels] = useState(false)
+  const [isPaused, setIsPaused] = useState(false)
+
+  const controlsRef = useRef({
+    repulsionStrength,
+    attractionStrength,
+    damping,
+    nodeSize,
+    showLabels,
+    showEdgeLabels,
+    isPaused
+  })
+
+  useEffect(() => {
+    controlsRef.current = {
+      repulsionStrength,
+      attractionStrength,
+      damping,
+      nodeSize,
+      showLabels,
+      showEdgeLabels,
+      isPaused
+    }
+  }, [repulsionStrength, attractionStrength, damping, nodeSize, showLabels, showEdgeLabels, isPaused])
+
+  useEffect(() => {
+    let p5: any
+    let isMounted = true
+
+    const loadP5 = async () => {
+      if (typeof window !== 'undefined' && canvasRef.current) {
+        if (canvasRef.current) {
+          canvasRef.current.innerHTML = ''
+        }
+
+        const p5Module = await import('p5')
+        const P5 = p5Module.default
+
+        if (!isMounted) return
+
+        const sketch = (p: any) => {
+          const Vector = (p as any).constructor.Vector
+
+          // Node class for network graph
+          class Node {
+            id: string
+            label: string
+            pos: any
+            vel: any
+            acc: any
+            mass: number
+            size: number
+            color: any
+            group: number
+            fixed: boolean
+            dragging: boolean
+
+            constructor(id: string, label: string, x?: number, y?: number, size = 10, color?: string, group = 0) {
+              this.id = id
+              this.label = label
+              this.pos = p.createVector(
+                x ?? p.random(100, width - 100),
+                y ?? p.random(100, height - 100)
+              )
+              this.vel = p.createVector(0, 0)
+              this.acc = p.createVector(0, 0)
+              this.size = size
+              this.mass = size
+              this.color = color ? p.color(color) : p.color(100, 150, 255)
+              this.group = group
+              this.fixed = false
+              this.dragging = false
+            }
+
+            applyForce(force: any) {
+              const f = Vector.div(force, this.mass)
+              this.acc.add(f)
+            }
+
+            // Calculate repulsion from all other nodes
+            repel(nodes: Node[]) {
+              const controls = controlsRef.current
+
+              for (let other of nodes) {
+                if (other === this) continue
+
+                const force = Vector.sub(this.pos, other.pos)
+                let distance = force.mag()
+
+                // Prevent division by zero and extreme forces
+                distance = p.constrain(distance, 5, 500)
+
+                // Coulomb's law: F = k / r^2
+                const strength = controls.repulsionStrength / (distance * distance)
+                force.setMag(strength)
+
+                this.applyForce(force)
+              }
+            }
+
+            update() {
+              const controls = controlsRef.current
+              if (controls.isPaused || this.fixed || this.dragging) return
+
+              this.vel.add(this.acc)
+              this.vel.mult(controls.damping)
+              this.pos.add(this.vel)
+              this.acc.mult(0)
+
+              // Keep within bounds with soft boundaries
+              const margin = 50
+              if (this.pos.x < margin) {
+                this.vel.x += (margin - this.pos.x) * 0.01
+              }
+              if (this.pos.x > width - margin) {
+                this.vel.x += (width - margin - this.pos.x) * 0.01
+              }
+              if (this.pos.y < margin) {
+                this.vel.y += (margin - this.pos.y) * 0.01
+              }
+              if (this.pos.y > height - margin) {
+                this.vel.y += (height - margin - this.pos.y) * 0.01
+              }
+            }
+
+            display(isHovered: boolean, isConnected: boolean) {
+              const controls = controlsRef.current
+
+              // Draw node
+              if (isHovered) {
+                p.fill(255, 200, 100)
+                p.stroke(255, 150, 0)
+                p.strokeWeight(3)
+              } else if (isConnected) {
+                p.fill(this.color)
+                p.stroke(255, 255, 100)
+                p.strokeWeight(2)
+              } else {
+                p.fill(this.color)
+                p.stroke(255)
+                p.strokeWeight(1)
+              }
+
+              p.ellipse(this.pos.x, this.pos.y, controls.nodeSize * 2, controls.nodeSize * 2)
+
+              // Draw label
+              if (controls.showLabels) {
+                p.fill(255)
+                p.noStroke()
+                p.textAlign(p.CENTER, p.CENTER)
+                p.textSize(10)
+                p.text(this.label, this.pos.x, this.pos.y + controls.nodeSize + 12)
+              }
+            }
+
+            contains(x: number, y: number): boolean {
+              const controls = controlsRef.current
+              const d = p.dist(x, y, this.pos.x, this.pos.y)
+              return d < controls.nodeSize
+            }
+
+            startDrag() {
+              this.dragging = true
+              this.vel.mult(0)
+            }
+
+            drag(x: number, y: number) {
+              if (this.dragging) {
+                this.pos.x = x
+                this.pos.y = y
+              }
+            }
+
+            stopDrag() {
+              this.dragging = false
+            }
+          }
+
+          // Edge class for network connections
+          class Edge {
+            source: Node
+            target: Node
+            weight: number
+            directed: boolean
+            label: string
+
+            constructor(source: Node, target: Node, weight = 1, directed = false, label = '') {
+              this.source = source
+              this.target = target
+              this.weight = weight
+              this.directed = directed
+              this.label = label
+            }
+
+            // Apply spring force between connected nodes
+            applySpringForce() {
+              const controls = controlsRef.current
+
+              const force = Vector.sub(this.target.pos, this.source.pos)
+              const distance = force.mag()
+
+              // Hooke's law: F = k * (x - rest_length)
+              const restLength = 100
+              const strength = controls.attractionStrength * (distance - restLength)
+
+              force.setMag(strength)
+
+              this.source.applyForce(force)
+              this.target.applyForce(Vector.mult(force, -1))
+            }
+
+            display(isHighlighted: boolean) {
+              const controls = controlsRef.current
+
+              if (isHighlighted) {
+                p.stroke(255, 255, 100, 200)
+                p.strokeWeight(3)
+              } else {
+                p.stroke(100, 100, 100, 100)
+                p.strokeWeight(1 + this.weight * 0.5)
+              }
+
+              p.line(this.source.pos.x, this.source.pos.y, this.target.pos.x, this.target.pos.y)
+
+              // Draw arrow for directed edges
+              if (this.directed) {
+                this.drawArrow()
+              }
+
+              // Draw edge label
+              if (controls.showEdgeLabels && this.label) {
+                const midX = (this.source.pos.x + this.target.pos.x) / 2
+                const midY = (this.source.pos.y + this.target.pos.y) / 2
+
+                p.fill(200)
+                p.noStroke()
+                p.textAlign(p.CENTER, p.CENTER)
+                p.textSize(8)
+                p.text(this.label, midX, midY)
+              }
+            }
+
+            drawArrow() {
+              const angle = Math.atan2(
+                this.target.pos.y - this.source.pos.y,
+                this.target.pos.x - this.source.pos.x
+              )
+
+              // Position arrow at edge of target node
+              const arrowDist = controlsRef.current.nodeSize + 5
+              const arrowX = this.target.pos.x - Math.cos(angle) * arrowDist
+              const arrowY = this.target.pos.y - Math.sin(angle) * arrowDist
+
+              const arrowSize = 8
+
+              p.push()
+              p.translate(arrowX, arrowY)
+              p.rotate(angle)
+
+              p.fill(100, 100, 100, 150)
+              p.noStroke()
+              p.beginShape()
+              p.vertex(arrowSize, 0)
+              p.vertex(-arrowSize, arrowSize / 2)
+              p.vertex(-arrowSize, -arrowSize / 2)
+              p.endShape(p.CLOSE)
+
+              p.pop()
+            }
+          }
+
+          // Sketch state
+          let nodes: Node[] = []
+          let edges: Edge[] = []
+          let hoveredNode: Node | null = null
+          let draggedNode: Node | null = null
+          let connectedNodeIds: Set<string> = new Set()
+
+          const initializeGraph = () => {
+            nodes = []
+            edges = []
+            hoveredNode = null
+            draggedNode = null
+            connectedNodeIds = new Set()
+
+            if (!data?.nodes || data.nodes.length === 0) return
+
+            // Create nodes
+            const nodeMap = new Map<string, Node>()
+            for (let nodeData of data.nodes) {
+              const node = new Node(
+                nodeData.id,
+                nodeData.label || nodeData.id,
+                undefined,
+                undefined,
+                nodeData.size,
+                nodeData.color,
+                nodeData.group
+              )
+              nodes.push(node)
+              nodeMap.set(nodeData.id, node)
+            }
+
+            // Create edges
+            if (data.edges) {
+              for (let edgeData of data.edges) {
+                const source = nodeMap.get(edgeData.source)
+                const target = nodeMap.get(edgeData.target)
+
+                if (source && target) {
+                  const edge = new Edge(
+                    source,
+                    target,
+                    edgeData.weight,
+                    edgeData.directed ?? data.directed,
+                    edgeData.label
+                  )
+                  edges.push(edge)
+                }
+              }
+            }
+          }
+
+          const updatePhysics = () => {
+            const controls = controlsRef.current
+            if (controls.isPaused) return
+
+            // Apply repulsion between all nodes
+            for (let node of nodes) {
+              node.repel(nodes)
+            }
+
+            // Apply spring forces along edges
+            for (let edge of edges) {
+              edge.applySpringForce()
+            }
+
+            // Update node positions
+            for (let node of nodes) {
+              node.update()
+            }
+          }
+
+          const findHoveredNode = () => {
+            for (let node of nodes) {
+              if (node.contains(p.mouseX, p.mouseY)) {
+                return node
+              }
+            }
+            return null
+          }
+
+          const findConnectedNodes = (node: Node | null) => {
+            const connected = new Set<string>()
+            if (!node) return connected
+
+            connected.add(node.id)
+
+            for (let edge of edges) {
+              if (edge.source.id === node.id) {
+                connected.add(edge.target.id)
+              }
+              if (edge.target.id === node.id) {
+                connected.add(edge.source.id)
+              }
+            }
+
+            return connected
+          }
+
+          p.setup = () => {
+            const canvas = p.createCanvas(width, height)
+            canvas.parent(canvasRef.current)
+            canvas.style('display', 'block')
+            canvas.style('margin', '0 auto')
+
+            initializeGraph()
+          }
+
+          p.draw = () => {
+            const controls = controlsRef.current
+
+            p.background(250)
+
+            if (nodes.length === 0) {
+              p.fill(100)
+              p.textAlign(p.CENTER, p.CENTER)
+              p.textSize(16)
+              p.text('Load network data via URL parameter, file upload, or use demo data', width/2, height/2)
+              return
+            }
+
+            // Update physics
+            updatePhysics()
+
+            // Update hovered node
+            hoveredNode = findHoveredNode()
+            connectedNodeIds = findConnectedNodes(hoveredNode)
+
+            // Draw edges first (behind nodes)
+            for (let edge of edges) {
+              const isHighlighted = connectedNodeIds.has(edge.source.id) && connectedNodeIds.has(edge.target.id)
+              edge.display(isHighlighted)
+            }
+
+            // Draw nodes
+            for (let node of nodes) {
+              const isHovered = node === hoveredNode
+              const isConnected = connectedNodeIds.has(node.id) && hoveredNode !== null
+              node.display(isHovered, isConnected)
+            }
+
+            // Draw UI info
+            p.fill(60)
+            p.noStroke()
+            p.textAlign(p.LEFT, p.TOP)
+            p.textSize(10)
+
+            const fps = Math.round(p.frameRate())
+            p.text(`FPS: ${fps}`, 10, 10)
+            p.text(`Nodes: ${nodes.length}`, 10, 25)
+            p.text(`Edges: ${edges.length}`, 10, 40)
+
+            if (controls.isPaused) {
+              p.textAlign(p.CENTER, p.CENTER)
+              p.textSize(24)
+              p.fill(255, 0, 0, 150)
+              p.text('PAUSED', width/2, height/2)
+            }
+          }
+
+          p.mousePressed = () => {
+            draggedNode = findHoveredNode()
+            if (draggedNode) {
+              draggedNode.startDrag()
+            }
+            return false
+          }
+
+          p.mouseDragged = () => {
+            if (draggedNode) {
+              draggedNode.drag(p.mouseX, p.mouseY)
+            }
+            return false
+          }
+
+          p.mouseReleased = () => {
+            if (draggedNode) {
+              draggedNode.stopDrag()
+              draggedNode = null
+            }
+            return false
+          }
+
+          p.keyPressed = () => {
+            switch (p.key.toLowerCase()) {
+              case ' ':
+                setIsPaused(prev => !prev)
+                break
+              case 'r':
+                initializeGraph()
+                break
+              case 'l':
+                setShowLabels(prev => !prev)
+                break
+              case 'f':
+                // Fix all nodes in place
+                for (let node of nodes) {
+                  node.fixed = !node.fixed
+                }
+                break
+            }
+            return false
+          }
+
+          // Public method to reinitialize
+          ;(p as any).reinitializeGraph = initializeGraph
+        }
+
+        if (!isMounted) return
+
+        p5 = new P5(sketch)
+
+        if (isMounted) {
+          setP5Instance(p5)
+        }
+      }
+    }
+
+    loadP5()
+
+    return () => {
+      isMounted = false
+      if (p5) {
+        p5.remove()
+      }
+      setP5Instance(null)
+      if (canvasRef.current) {
+        canvasRef.current.innerHTML = ''
+      }
+    }
+  }, [data, width, height, onError])
+
+  return (
+    <div className="flex flex-col items-center w-full gap-4">
+      {/* Canvas */}
+      <div ref={canvasRef} className="border border-gray-300 rounded-lg shadow-sm bg-white" />
+
+      {/* Controls */}
+      <div className="w-full max-w-6xl bg-white rounded-lg shadow-md p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Repulsion Strength */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Repulsion: <span className="text-blue-600">{repulsionStrength}</span>
+            </label>
+            <input
+              type="range"
+              min="1000"
+              max="15000"
+              step="500"
+              value={repulsionStrength}
+              onChange={(e) => setRepulsionStrength(parseInt(e.target.value))}
+              className="w-full"
+            />
+          </div>
+
+          {/* Attraction Strength */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Attraction: <span className="text-blue-600">{attractionStrength.toFixed(3)}</span>
+            </label>
+            <input
+              type="range"
+              min="0.001"
+              max="0.05"
+              step="0.001"
+              value={attractionStrength}
+              onChange={(e) => setAttractionStrength(parseFloat(e.target.value))}
+              className="w-full"
+            />
+          </div>
+
+          {/* Damping */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Damping: <span className="text-blue-600">{damping.toFixed(2)}</span>
+            </label>
+            <input
+              type="range"
+              min="0.5"
+              max="0.99"
+              step="0.01"
+              value={damping}
+              onChange={(e) => setDamping(parseFloat(e.target.value))}
+              className="w-full"
+            />
+          </div>
+
+          {/* Node Size */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Node Size: <span className="text-blue-600">{nodeSize}</span>
+            </label>
+            <input
+              type="range"
+              min="5"
+              max="30"
+              value={nodeSize}
+              onChange={(e) => setNodeSize(parseInt(e.target.value))}
+              className="w-full"
+            />
+          </div>
+        </div>
+
+        {/* Toggles */}
+        <div className="flex flex-wrap gap-3 mt-6">
+          <button
+            onClick={() => setIsPaused(!isPaused)}
+            className="btn px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            {isPaused ? 'Resume' : 'Pause'}
+          </button>
+          <button
+            onClick={() => setShowLabels(!showLabels)}
+            className={`btn px-4 py-2 rounded ${
+              showLabels
+                ? 'bg-green-500 text-white hover:bg-green-600'
+                : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+            }`}
+          >
+            Node Labels {showLabels ? 'ON' : 'OFF'}
+          </button>
+          <button
+            onClick={() => setShowEdgeLabels(!showEdgeLabels)}
+            className={`btn px-4 py-2 rounded ${
+              showEdgeLabels
+                ? 'bg-green-500 text-white hover:bg-green-600'
+                : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+            }`}
+          >
+            Edge Labels {showEdgeLabels ? 'ON' : 'OFF'}
+          </button>
+          <button
+            onClick={() => {
+              if (p5Instance && (p5Instance as any).reinitializeGraph) {
+                ;(p5Instance as any).reinitializeGraph()
+              }
+            }}
+            className="btn px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+          >
+            Reset Layout
+          </button>
+        </div>
+
+        {/* Instructions */}
+        <div className="mt-6 text-sm text-gray-600 space-y-1">
+          <p><strong>Drag nodes:</strong> Click and drag to reposition</p>
+          <p><strong>Hover:</strong> Highlight connected nodes and edges</p>
+          <p><strong>Space:</strong> Pause/Resume physics</p>
+          <p><strong>R:</strong> Reset layout</p>
+          <p><strong>L:</strong> Toggle labels</p>
+          <p><strong>F:</strong> Fix/unfix all nodes</p>
+          <p className="mt-3 text-xs italic">
+            Layout uses force-directed algorithm: repulsion between all nodes + spring attraction along edges
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}

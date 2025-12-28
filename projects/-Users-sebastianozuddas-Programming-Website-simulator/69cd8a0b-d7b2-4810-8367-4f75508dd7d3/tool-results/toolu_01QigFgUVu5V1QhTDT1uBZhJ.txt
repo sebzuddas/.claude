@@ -1,0 +1,36 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/components/visualizations/SystemModel.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+    56→  const [isPlaying, setIsPlaying] = useState(false)
+    57→  const [simulationError, setSimulationError] = useState<string | null>(null)
+    58→  const simulationErrorRef = useRef<string | null>(null) // Ref for P5 to read
+    59→
+    60→  // Sync state to refs so P5 can read without re-mounting
+    61→  useEffect(() => {
+    62→    currentTimeIndexRef.current = currentTimeIndex
+    63→  }, [currentTimeIndex])
+    64→
+    65→  useEffect(() => {
+    66→    simulationErrorRef.current = simulationError
+    67→  }, [simulationError])
+    68→
+    69→  // Run simulation when data changes
+    70→  useEffect(() => {
+    71→    if (!data) return
+    72→
+    73→    try {
+    74→      const result = runSimulation(data)
+    75→      simulationRef.current = result
+    76→      setCurrentTimeIndex(0)
+    77→      currentTimeIndexRef.current = 0
+    78→      setSimulationError(null)
+    79→      simulationErrorRef.current = null
+    80→    } catch (error) {
+    81→      const errorMsg = error instanceof Error ? error.message : 'Simulation failed'
+    82→      setSimulationError(errorMsg)
+    83→      simulationErrorRef.current = errorMsg
+    84→      onError?.(errorMsg)
+    85→    }
+    86→  }, [data, onError])
+    87→
+    88→  // Auto-play animation
+    89→  useEffect(() => {
+    90→    if (!isPlaying || !simulationRef.current) return

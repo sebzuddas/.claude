@@ -1,0 +1,520 @@
+// Utility functions migrated from common.js to TypeScript
+
+import type { 
+  DataValidationResult, 
+  FileUploadResult, 
+  ThemeConfig, 
+  ColorTuple,
+  HeatMapData,
+  ScatterPlotData,
+  ParticleSystemConfig
+} from '@/types';
+
+export class DataParser {
+  static parseURLParams(): { data?: any; demo?: boolean; error?: string } {
+    if (typeof window === 'undefined') return {};
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const data = urlParams.get('data');
+    const demo = urlParams.get('demo');
+    
+    if (demo === 'true') {
+      return { demo: true };
+    }
+    
+    if (data) {
+      try {
+        return { data: JSON.parse(decodeURIComponent(data)) };
+      } catch (e) {
+        console.error('Failed to parse URL data:', e);
+        return { error: 'Invalid JSON data in URL' };
+      }
+    }
+    
+    return {};
+  }
+  
+  static parseHashData(): { data?: any; error?: string } {
+    if (typeof window === 'undefined') return {};
+    
+    const hash = window.location.hash.slice(1);
+    if (!hash) return {};
+    
+    try {
+      // Try Base64 decode first
+      const decoded = atob(hash);
+      return { data: JSON.parse(decoded) };
+    } catch (e) {
+      try {
+        // Fallback to direct JSON parse
+        return { data: JSON.parse(decodeURIComponent(hash)) };
+      } catch (e2) {
+        console.error('Failed to parse hash data:', e2);
+        return { error: 'Invalid data in hash' };
+      }
+    }
+  }
+  
+  static validateData(
+    data: any, 
+    schema: { required?: string[]; type?: string }
+  ): DataValidationResult {
+    if (!data) return { valid: false, errors: ['No data provided'] };
+    
+    const errors: string[] = [];
+    
+    // Basic validation based on schema
+    if (schema.required) {
+      for (const field of schema.required) {
+        if (!(field in data)) {
+          errors.push(`Missing required field: ${field}`);
+        }
+      }
+    }
+    
+    if (schema.type && typeof data !== schema.type) {
+      errors.push(`Expected type ${schema.type}, got ${typeof data}`);
+    }
+    
+    return {
+      valid: errors.length === 0,
+      errors: errors
+    };
+  }
+}
+
+export class ColorUtils {
+  private static themeConfig: ThemeConfig | null = null;
+  
+  static async loadThemeConfig(): Promise<ThemeConfig> {
+    if (!this.themeConfig) {
+      try {
+        const response = await fetch('/data/color-palettes.json');
+        this.themeConfig = await response.json();
+      } catch (error) {
+        console.warn('Could not load color palettes config, using defaults');
+        this.themeConfig = { 
+          themes: {}, 
+          colorPalettes: {}, 
+          visualizationDefaults: {} 
+        };
+      }
+    }
+    return this.themeConfig!;
+  }
+  
+  static async getColorPalette(name = 'viridis', steps = 256): Promise<ColorTuple[]> {
+    await this.loadThemeConfig();
+    
+    // Check if it's a predefined palette from config
+    if (this.themeConfig?.colorPalettes?.[name]) {
+      const paletteData = this.themeConfig.colorPalettes[name];
+      return this.interpolatePalette(paletteData.colors, steps);
+    }
+    
+    // Fallback to generated palettes
+    const palettes: Record<string, () => ColorTuple[]> = {
+      viridis: () => this.generateViridis(steps),
+      plasma: () => this.generatePlasma(steps),
+      inferno: () => this.generateInferno(steps),
+      heat: () => this.generateHeat(steps),
+      cool: () => this.generateCool(steps),
+      warm: () => this.generateWarm(steps),
+      grayscale: () => this.generateGrayscale(steps),
+      categorical: () => this.generateCategorical(),
+      ocean: () => this.generateOcean(steps)
+    };
+    
+    return palettes[name]?.() || palettes.viridis();
+  }
+  
+  private static interpolatePalette(baseColors: string[], steps: number): ColorTuple[] {
+    if (baseColors.length === 0) return [];
+    if (steps <= baseColors.length) {
+      return baseColors.slice(0, steps).map(this.hexToRgb);
+    }
+    
+    const result: ColorTuple[] = [];
+    const segmentSize = (steps - 1) / (baseColors.length - 1);
+    
+    for (let i = 0; i < steps; i++) {
+      const position = i / segmentSize;
+      const index = Math.floor(position);
+      const fraction = position - index;
+      
+      if (index >= baseColors.length - 1) {
+        result.push(this.hexToRgb(baseColors[baseColors.length - 1]));
+      } else {
+        const color1 = this.hexToRgb(baseColors[index]);
+        const color2 = this.hexToRgb(baseColors[index + 1]);
+        const interpolated: ColorTuple = [
+          Math.round(color1[0] + (color2[0] - color1[0]) * fraction),
+          Math.round(color1[1] + (color2[1] - color1[1]) * fraction),
+          Math.round(color1[2] + (color2[2] - color1[2]) * fraction)
+        ];
+        result.push(interpolated);
+      }
+    }
+    
+    return result;
+  }
+  
+  private static hexToRgb(hex: string): ColorTuple {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? [
+      parseInt(result[1], 16),
+      parseInt(result[2], 16),
+      parseInt(result[3], 16)
+    ] : [0, 0, 0];
+  }
+  
+  static rgbToHex(r: number, g: number, b: number): string {
+    return "#" + [r, g, b].map(x => {
+      const hex = x.toString(16);
+      return hex.length === 1 ? "0" + hex : hex;
+    }).join("");
+  }
+  
+  static getThemeColor(colorName: string): string {
+    if (typeof window === 'undefined') return '';
+    
+    const root = document.documentElement;
+    const style = getComputedStyle(root);
+    return style.getPropertyValue(`--color-${colorName}`).trim();
+  }
+  
+  private static generateViridis(steps: number): ColorTuple[] {
+    const colors: ColorTuple[] = [];
+    for (let i = 0; i < steps; i++) {
+      const t = i / (steps - 1);
+      const r = Math.round(255 * (0.267 + 0.905 * t - 0.334 * t * t));
+      const g = Math.round(255 * (0.004 + 0.666 * t + 0.334 * t * t));
+      const b = Math.round(255 * (0.329 + 0.658 * t - 0.328 * t * t));
+      colors.push([r, g, b]);
+    }
+    return colors;
+  }
+  
+  private static generatePlasma(steps: number): ColorTuple[] {
+    const colors: ColorTuple[] = [];
+    for (let i = 0; i < steps; i++) {
+      const t = i / (steps - 1);
+      const r = Math.round(255 * (0.583 + 0.898 * t - 0.481 * t * t));
+      const g = Math.round(255 * (0.078 + 0.221 * t + 0.701 * t * t));
+      const b = Math.round(255 * (0.593 + 0.064 * t - 0.657 * t * t));
+      colors.push([r, g, b]);
+    }
+    return colors;
+  }
+  
+  private static generateInferno(steps: number): ColorTuple[] {
+    const colors: ColorTuple[] = [];
+    for (let i = 0; i < steps; i++) {
+      const t = i / (steps - 1);
+      const r = Math.round(255 * (0.001 + 0.998 * Math.pow(t, 0.8)));
+      const g = Math.round(255 * Math.pow(t, 3));
+      const b = Math.round(255 * Math.pow(Math.max(0, t - 0.3), 2));
+      colors.push([r, g, b]);
+    }
+    return colors;
+  }
+  
+  private static generateHeat(steps: number): ColorTuple[] {
+    const colors: ColorTuple[] = [];
+    for (let i = 0; i < steps; i++) {
+      const t = i / (steps - 1);
+      const r = Math.round(255 * Math.min(1, 2 * t));
+      const g = Math.round(255 * Math.max(0, 2 * t - 1));
+      const b = 0;
+      colors.push([r, g, b]);
+    }
+    return colors;
+  }
+  
+  private static generateWarm(steps: number): ColorTuple[] {
+    const colors: ColorTuple[] = [];
+    for (let i = 0; i < steps; i++) {
+      const t = i / (steps - 1);
+      const r = 255;
+      const g = Math.round(255 * t);
+      const b = 0;
+      colors.push([r, g, b]);
+    }
+    return colors;
+  }
+  
+  private static generateCool(steps: number): ColorTuple[] {
+    const colors: ColorTuple[] = [];
+    for (let i = 0; i < steps; i++) {
+      const t = i / (steps - 1);
+      const r = Math.round(255 * t);
+      const g = Math.round(255 * (1 - t));
+      const b = 255;
+      colors.push([r, g, b]);
+    }
+    return colors;
+  }
+  
+  private static generateOcean(steps: number): ColorTuple[] {
+    const colors: ColorTuple[] = [];
+    for (let i = 0; i < steps; i++) {
+      const t = i / (steps - 1);
+      const r = Math.round(64 * t);
+      const g = Math.round(128 + 127 * t);
+      const b = Math.round(128 + 127 * t);
+      colors.push([r, g, b]);
+    }
+    return colors;
+  }
+  
+  private static generateGrayscale(steps: number): ColorTuple[] {
+    const colors: ColorTuple[] = [];
+    for (let i = 0; i < steps; i++) {
+      const value = Math.round(255 * i / (steps - 1));
+      colors.push([value, value, value]);
+    }
+    return colors;
+  }
+  
+  private static generateCategorical(): ColorTuple[] {
+    return [
+      [31, 119, 180],   // blue
+      [255, 127, 14],   // orange
+      [44, 160, 44],    // green
+      [214, 39, 40],    // red
+      [148, 103, 189],  // purple
+      [140, 86, 75],    // brown
+      [227, 119, 194],  // pink
+      [127, 127, 127],  // gray
+      [188, 189, 34],   // olive
+      [23, 190, 207]    // cyan
+    ];
+  }
+  
+  static interpolateColor(value: number, min: number, max: number, palette: ColorTuple[]): ColorTuple {
+    const normalizedValue = Math.max(0, Math.min(1, (value - min) / (max - min)));
+    const index = Math.floor(normalizedValue * (palette.length - 1));
+    return palette[index] || [0, 0, 0];
+  }
+}
+
+export class TypographyUtils {
+  private static themeConfig: ThemeConfig | null = null;
+  
+  static async loadThemeConfig(): Promise<ThemeConfig> {
+    if (!this.themeConfig) {
+      this.themeConfig = await ColorUtils.loadThemeConfig();
+    }
+    return this.themeConfig;
+  }
+  
+  static async getFont(): Promise<string> {
+    await this.loadThemeConfig();
+    const defaultFont = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    
+    if (this.themeConfig?.themes?.default?.typography?.fontFamily) {
+      return this.themeConfig.themes.default.typography.fontFamily;
+    }
+    
+    return defaultFont;
+  }
+  
+  static async getFontSize(size = 'base'): Promise<number> {
+    await this.loadThemeConfig();
+    const defaultSizes: Record<string, number> = {
+      xs: 12,
+      sm: 14, 
+      base: 16,
+      lg: 18,
+      xl: 20,
+      '2xl': 24,
+      '3xl': 30,
+      '4xl': 36
+    };
+    
+    if (this.themeConfig?.themes?.default?.typography?.fontSizes?.[size]) {
+      // Convert rem to pixels (assuming 1rem = 16px)
+      const remValue = parseFloat(this.themeConfig.themes.default.typography.fontSizes[size]);
+      return Math.round(remValue * 16);
+    }
+    
+    return defaultSizes[size] || defaultSizes.base;
+  }
+  
+  static async getVisualizationFontSize(vizType: string, element = 'fontSize'): Promise<number> {
+    await this.loadThemeConfig();
+    
+    const vizDefaults = this.themeConfig?.visualizationDefaults?.[vizType];
+    if (vizDefaults && element in vizDefaults) {
+      const sizeKey = (vizDefaults as any)[element];
+      return await this.getFontSize(sizeKey);
+    }
+    
+    return await this.getFontSize('base');
+  }
+}
+
+export class Utils {
+  static clamp(value: number, min: number, max: number): number {
+    return Math.min(Math.max(value, min), max);
+  }
+  
+  static lerp(start: number, end: number, t: number): number {
+    return start + (end - start) * t;
+  }
+  
+  static map(value: number, fromMin: number, fromMax: number, toMin: number, toMax: number): number {
+    return toMin + (value - fromMin) * (toMax - toMin) / (fromMax - fromMin);
+  }
+  
+  static generateUUID(): string {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+  
+  static debounce<T extends (...args: any[]) => any>(func: T, wait: number): (...args: Parameters<T>) => void {
+    let timeout: NodeJS.Timeout;
+    return function(...args: Parameters<T>) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  }
+  
+  static saveToLocalStorage(key: string, data: any): boolean {
+    if (typeof window === 'undefined') return false;
+    
+    try {
+      localStorage.setItem(key, JSON.stringify(data));
+      return true;
+    } catch (e) {
+      console.error('Failed to save to localStorage:', e);
+      return false;
+    }
+  }
+  
+  static loadFromLocalStorage<T = any>(key: string): T | null {
+    if (typeof window === 'undefined') return null;
+    
+    try {
+      const item = localStorage.getItem(key);
+      return item ? JSON.parse(item) : null;
+    } catch (e) {
+      console.error('Failed to load from localStorage:', e);
+      return null;
+    }
+  }
+}
+
+export class FileHandler {
+  static setupDropZone(
+    elementId: string,
+    callback: (result: FileUploadResult) => void
+  ): (() => void) | null {
+    if (typeof window === 'undefined') return null;
+
+    const dropZone = document.getElementById(elementId);
+    if (!dropZone) return null;
+
+    // Store event handlers so they can be removed
+    const handleDragOver = (e: Event) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    };
+
+    const handleDragLeave = (e: Event) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+    };
+
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+
+      const files = e.dataTransfer?.files;
+      if (files && files.length > 0) {
+        this.handleFile(files[0], callback);
+      }
+    };
+
+    dropZone.addEventListener('dragover', handleDragOver);
+    dropZone.addEventListener('dragleave', handleDragLeave);
+    dropZone.addEventListener('drop', handleDrop);
+
+    // Also handle file input
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.json';
+    fileInput.style.display = 'none';
+    document.body.appendChild(fileInput);
+
+    const handleClick = () => {
+      fileInput.click();
+    };
+
+    const handleChange = (e: Event) => {
+      const target = e.target as HTMLInputElement;
+      if (target.files && target.files.length > 0) {
+        this.handleFile(target.files[0], callback);
+      }
+    };
+
+    dropZone.addEventListener('click', handleClick);
+    fileInput.addEventListener('change', handleChange);
+
+    // Return cleanup function to remove all event listeners
+    return () => {
+      dropZone.removeEventListener('dragover', handleDragOver);
+      dropZone.removeEventListener('dragleave', handleDragLeave);
+      dropZone.removeEventListener('drop', handleDrop);
+      dropZone.removeEventListener('click', handleClick);
+      fileInput.removeEventListener('change', handleChange);
+      if (fileInput.parentNode) {
+        fileInput.parentNode.removeChild(fileInput);
+      }
+    };
+  }
+  
+  private static handleFile(file: File, callback: (result: FileUploadResult) => void): void {
+    if (file.type !== 'application/json' && !file.name.endsWith('.json')) {
+      callback({ error: 'Please select a JSON file' });
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target?.result as string);
+        callback({ data });
+      } catch (error) {
+        callback({ error: `Invalid JSON file: ${(error as Error).message}` });
+      }
+    };
+    reader.readAsText(file);
+  }
+}
+
+export class MessageHandler {
+  static setupPostMessageListener(callback: (data: any) => void): void {
+    if (typeof window === 'undefined') return;
+    
+    window.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'updateData') {
+        callback(event.data.data);
+      }
+    });
+  }
+  
+  static sendMessage(targetWindow: Window, data: any): void {
+    targetWindow.postMessage({
+      type: 'updateData',
+      data: data
+    }, '*');
+  }
+}

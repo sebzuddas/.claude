@@ -1,0 +1,20 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/app/abm/page.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+     4→import VisualizationLayout from '@/components/ui/VisualizationLayout'
+     5→import FileUploadZone from '@/components/ui/FileUploadZone'
+     6→import MessageDisplay from '@/components/ui/MessageDisplay'
+     7→import type { FileUploadResult } from '@/types'
+     8→import CodeBlock from '@/components/ui/CodeBlock'
+     9→import {
+    10→  SimulationController,
+    11→  ABMRenderer,
+    12→  createLegend,
+    13→  type ABMModelDefinition,
+    14→  type SimulationState,
+    15→  type TimeseriesData,
+    16→  type EntityId,
+    17→  type VisualConfig
+    18→} from '@/lib/abm'
+    19→
+    20→// Demo models
+    21→import { FLOCKING_MODEL } from './demos/flocking'
+    22→import { SIR_MODEL } from './demos/sir'

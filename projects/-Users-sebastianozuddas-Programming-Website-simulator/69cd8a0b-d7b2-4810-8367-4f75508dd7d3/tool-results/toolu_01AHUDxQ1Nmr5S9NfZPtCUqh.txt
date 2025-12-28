@@ -1,0 +1,45 @@
+347-      // Update trails
+348-      if (this.config.showTrails) {
+349-        this.updateTrail(entityObj.id, position)
+350-      }
+351-    }
+352-
+353-    // Remove graphics for entities that no longer exist
+354-    for (const [entityId, graphics] of this.agentGraphics) {
+355-      if (!currentIds.has(entityId)) {
+356-        this.agentContainer.removeChild(graphics)
+357:        graphics.destroy()
+358-        this.agentGraphics.delete(entityId)
+359-        this.trailPoints.delete(entityId)
+360-      }
+361-    }
+362-
+363-    // Render trails
+364-    if (this.config.showTrails) {
+365-      this.renderTrails()
+366-    }
+367-  }
+--
+471-   * Clear all trails
+472-   */
+473-  clearTrails(): void {
+474-    this.trailPoints.clear()
+475-    this.trailContainer?.removeChildren()
+476-  }
+477-
+478-  /**
+479-   * Destroy the renderer
+480-   */
+481:  destroy(): void {
+482-    if (this.app) {
+483:      this.app.destroy(true, { children: true, texture: true })
+484-      this.app = null
+485-    }
+486-
+487-    this.agentGraphics.clear()
+488-    this.trailPoints.clear()
+489-    this.initialized = false
+490-  }
+491-
+492-  /**
+493-   * Get PIXI application (for external access)

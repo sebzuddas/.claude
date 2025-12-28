@@ -1,0 +1,44 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/components/visualizations/SystemModel.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   772→      <div ref={canvasRef} />
+   773→
+   774→      {/* Playback Controls */}
+   775→      <div ref={controlsRef} className="mt-4 p-4 bg-gray-100 rounded-lg">
+   776→        {/* Export Controls */}
+   777→        <div className="flex items-center justify-center gap-2 mb-4 pb-3 border-b border-gray-300">
+   778→          <button
+   779→            onClick={openInStateSpaceVisualizer}
+   780→            className="px-4 py-2 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded hover:from-pink-600 hover:to-purple-600 transition-colors text-sm font-semibold shadow-md"
+   781→            disabled={!simulationRef.current}
+   782→            title="Open this simulation in the State Space Visualizer"
+   783→          >
+   784→            🎨 View Phase Portrait
+   785→          </button>
+   786→          <button
+   787→            onClick={exportToCSV}
+   788→            className="px-3 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors text-sm"
+   789→            disabled={!simulationRef.current}
+   790→            title="Export time series data as CSV"
+   791→          >
+   792→            📊 Export CSV
+   793→          </button>
+   794→          <button
+   795→            onClick={exportToJSON}
+   796→            className="px-3 py-1 bg-indigo-500 text-white rounded hover:bg-indigo-600 transition-colors text-sm"
+   797→            disabled={!simulationRef.current}
+   798→            title="Export complete simulation data as JSON"
+   799→          >
+   800→            📄 Export JSON
+   801→          </button>
+   802→          <button
+   803→            onClick={copyCurrentState}
+   804→            className="px-3 py-1 bg-teal-500 text-white rounded hover:bg-teal-600 transition-colors text-sm"
+   805→            disabled={!simulationRef.current}
+   806→            title="Copy current frame data to clipboard"
+   807→          >
+   808→            📋 Copy Frame
+   809→          </button>
+   810→        </div>
+   811→
+   812→        <div className="flex items-center justify-center gap-4 mb-3">
+   813→          <button
+   814→            onClick={handleReset}

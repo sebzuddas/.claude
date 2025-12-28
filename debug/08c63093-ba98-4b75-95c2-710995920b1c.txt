@@ -1,0 +1,2 @@
+2025-12-25T10:27:41.684Z [DEBUG] [SLOW OPERATION DETECTED] execSyncWithDefaults_DEPRECATED (19.6ms): security find-generic-password -a "sebastianozuddas" -w -s "Claude Code-credentials"
+2025-12-25T10:28:00.250Z [DEBUG] [SLOW OPERATION DETECTED] execSyncWithDefaults_DEPRECATED (32.8ms): security find-generic-password -a "sebastianozuddas" -w -s "Claude Code-credentials"

@@ -1,0 +1,32 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/components/visualizations/SystemModel.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   390→              y: oneMinusT * oneMinusT * y1 + 2 * oneMinusT * t * control.y + t * t * y2
+   391→            }
+   392→          }
+   393→
+   394→          function drawParticles(p: any, pool: Particle[]) {
+   395→            pool.forEach(particle => {
+   396→              if (!particle.active) return
+   397→
+   398→              const { edge, progress } = particle
+   399→
+   400→              // Get position on curve (or straight line)
+   401→              let x, y
+   402→              if (edge.curved) {
+   403→                const point = getPointOnCurve(edge.from.x, edge.from.y, edge.to.x, edge.to.y, edge.curveOffset, progress)
+   404→                x = point.x
+   405→                y = point.y
+   406→              } else {
+   407→                x = p.lerp(edge.from.x, edge.to.x, progress)
+   408→                y = p.lerp(edge.from.y, edge.to.y, progress)
+   409→              }
+   410→
+   411→              const isPositive = edge.weight >= 0
+   412→              p.fill(isPositive ? [50, 200, 50, 200] : [200, 50, 50, 200])
+   413→              p.noStroke()
+   414→              p.circle(x, y, 6)
+   415→            })
+   416→          }
+   417→
+   418→          function drawNodes(p: any, nodes: Node[]) {
+   419→            nodes.forEach(node => {
+   420→              // Node color based on type

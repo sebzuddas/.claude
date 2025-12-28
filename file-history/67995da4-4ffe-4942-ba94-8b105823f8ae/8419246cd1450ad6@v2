@@ -1,0 +1,142 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import VisualizationLayout from '@/components/ui/VisualizationLayout'
+import Particles from '@/components/visualizations/Particles'
+import FileUploadZone from '@/components/ui/FileUploadZone'
+import MessageDisplay from '@/components/ui/MessageDisplay'
+import CodeBlock from '@/components/ui/CodeBlock'
+import { DataParser } from '@/lib/utils'
+import type { ParticleSystemData, FileUploadResult } from '@/types'
+
+export default function ParticlesPage() {
+  const [config, setConfig] = useState<ParticleSystemData | null>(null)
+  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' }>()
+
+  useEffect(() => {
+    // Initialize with data from URL or demo config
+    const urlData = DataParser.parseURLParams()
+
+    if (urlData.error) {
+      setMessage({ text: urlData.error, type: 'error' })
+      return
+    }
+
+    if (urlData.demo || (!urlData.data)) {
+      generateDemoConfig()
+      setMessage({ text: 'Demo particle system loaded. Upload your own JSON config or use URL parameters.', type: 'success' })
+    } else {
+      setParticleConfig(urlData.data)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const generateDemoConfig = () => {
+    const demoConfig: ParticleSystemData = {
+      modelType: 'particleSystem',
+      parameters: {
+        particleCount: 100,
+        gravity: 0.5,
+        damping: 0.99
+      },
+      title: 'Demo Particle System'
+    }
+
+    setConfig(demoConfig)
+  }
+
+  const setParticleConfig = (newConfig: any) => {
+    // Validate configuration
+    if (!newConfig?.modelType || newConfig.modelType !== 'particleSystem') {
+      setMessage({ text: 'Invalid config: modelType must be "particleSystem"', type: 'error' })
+      return
+    }
+
+    if (!newConfig?.parameters) {
+      setMessage({ text: 'Invalid config: missing required "parameters" field', type: 'error' })
+      return
+    }
+
+    setConfig(newConfig)
+    setMessage({ text: 'Particle system configuration loaded successfully!', type: 'success' })
+  }
+
+  const handleFileUpload = (result: FileUploadResult) => {
+    if (result.error) {
+      setMessage({ text: result.error, type: 'error' })
+    } else if (result.data) {
+      setParticleConfig(result.data)
+    }
+  }
+
+  const handleExport = () => {
+    setMessage({ text: 'Export functionality coming soon!', type: 'info' })
+  }
+
+  return (
+    <VisualizationLayout
+      title="Particle System Simulator"
+      description="Interactive physics-based particle simulation with collision detection"
+    >
+      {/* File Upload */}
+      <FileUploadZone
+        onFileUpload={handleFileUpload}
+        description="Drop a JSON config file here or click to select"
+        className="w-full max-w-2xl"
+      />
+
+      {/* Message Display */}
+      {message && (
+        <MessageDisplay
+          message={message.text}
+          type={message.type}
+          onClose={() => setMessage(undefined)}
+        />
+      )}
+
+      {/* Visualization */}
+      {config && (
+        <div className="w-full">
+          <Particles
+            config={config}
+            onError={(error) => setMessage({ text: error, type: 'error' })}
+          />
+        </div>
+      )}
+
+      {/* Usage Instructions */}
+      <div className="mt-8 max-w-4xl">
+        <h3 className="text-lg font-semibold mb-4">Expected JSON Format:</h3>
+        <CodeBlock
+          code={{
+            "modelType": "particleSystem",
+            "parameters": {
+              "particleCount": 100,
+              "gravity": 0.5,
+              "damping": 0.99,
+              "bounds": {
+                "width": 900,
+                "height": 600
+              }
+            },
+            "initialConditions": {
+              "positions": "random",
+              "velocities": "random"
+            },
+            "forces": ["gravity", "collision"],
+            "title": "My Particle System"
+          }}
+        />
+
+        <div className="mt-6">
+          <h4 className="text-md font-semibold mb-2">Parameter Ranges:</h4>
+          <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
+            <li><strong>particleCount:</strong> 10-500 (default: 100)</li>
+            <li><strong>gravity:</strong> 0-2 (default: 0.5)</li>
+            <li><strong>damping:</strong> 0.9-1.0 (default: 0.99)</li>
+          </ul>
+        </div>
+      </div>
+    </VisualizationLayout>
+  )
+}

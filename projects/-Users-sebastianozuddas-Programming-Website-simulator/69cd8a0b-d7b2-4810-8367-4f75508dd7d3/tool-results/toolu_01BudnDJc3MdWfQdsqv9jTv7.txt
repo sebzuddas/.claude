@@ -1,0 +1,18 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/components/visualizations/SystemModel.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   181→              p.text('No simulation data', width / 2, (height - 100) / 2)
+   182→              return
+   183→            }
+   184→
+   185→            // Update node values based on current time (read from ref!)
+   186→            updateNodeValues(nodes, simulationRef.current, currentTimeIndexRef.current)
+   187→            updateEdgeFlowRates(edges, nodes)
+   188→
+   189→            // Update particles with variable speed (no spawning - particles are conserved)
+   190→            updateParticles(particlePool)
+   191→
+   192→            // Draw edges
+   193→            drawEdges(p, edges)
+   194→
+   195→            // Draw particles
+   196→            drawParticles(p, particlePool)
+   197→

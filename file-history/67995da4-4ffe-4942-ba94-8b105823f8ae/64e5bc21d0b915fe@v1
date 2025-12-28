@@ -1,0 +1,634 @@
+'use client'
+
+import { useEffect, useRef, useState } from 'react'
+import type { FlockingData, VisualizationProps } from '@/types'
+
+interface FlockingProps extends VisualizationProps {
+  config?: FlockingData
+}
+
+export default function Flocking({
+  config,
+  width = 900,
+  height = 600,
+  onError
+}: FlockingProps) {
+  const canvasRef = useRef<HTMLDivElement>(null)
+  const [p5Instance, setP5Instance] = useState<any>(null)
+
+  // Control states
+  const [boidCount, setBoidCount] = useState(
+    config?.parameters?.boidCount || 100
+  )
+  const [perceptionRadius, setPerceptionRadius] = useState(
+    config?.parameters?.perceptionRadius || 50
+  )
+  const [separationDistance, setSeparationDistance] = useState(
+    config?.parameters?.separationDistance || 25
+  )
+  const [separationForce, setSeparationForce] = useState(
+    config?.parameters?.separationForce || 1.5
+  )
+  const [alignmentForce, setAlignmentForce] = useState(
+    config?.parameters?.alignmentForce || 1.0
+  )
+  const [cohesionForce, setCohesionForce] = useState(
+    config?.parameters?.cohesionForce || 1.0
+  )
+  const [maxSpeed, setMaxSpeed] = useState(
+    config?.parameters?.maxSpeed || 4
+  )
+  const [maxForce, setMaxForce] = useState(
+    config?.parameters?.maxForce || 0.2
+  )
+  const [isPaused, setIsPaused] = useState(false)
+  const [showPerception, setShowPerception] = useState(false)
+
+  // Use refs for P5 to access latest values without recreating sketch
+  const controlsRef = useRef({
+    boidCount,
+    perceptionRadius,
+    separationDistance,
+    separationForce,
+    alignmentForce,
+    cohesionForce,
+    maxSpeed,
+    maxForce,
+    isPaused,
+    showPerception
+  })
+
+  useEffect(() => {
+    controlsRef.current = {
+      boidCount,
+      perceptionRadius,
+      separationDistance,
+      separationForce,
+      alignmentForce,
+      cohesionForce,
+      maxSpeed,
+      maxForce,
+      isPaused,
+      showPerception
+    }
+  }, [boidCount, perceptionRadius, separationDistance, separationForce, alignmentForce, cohesionForce, maxSpeed, maxForce, isPaused, showPerception])
+
+  useEffect(() => {
+    let p5: any
+    let isMounted = true
+
+    const loadP5 = async () => {
+      if (typeof window !== 'undefined' && canvasRef.current) {
+        if (canvasRef.current) {
+          canvasRef.current.innerHTML = ''
+        }
+
+        const p5Module = await import('p5')
+        const P5 = p5Module.default
+
+        if (!isMounted) return
+
+        const sketch = (p: any) => {
+          // Get Vector class from p5 instance
+          const Vector = (p as any).constructor.Vector
+
+          // Boid class implementing flocking behavior
+          class Boid {
+            pos: any
+            vel: any
+            acc: any
+            color: any
+
+            constructor(x?: number, y?: number) {
+              this.pos = p.createVector(
+                x ?? p.random(width),
+                y ?? p.random(height)
+              )
+              this.vel = p.createVector(
+                p.random(-2, 2),
+                p.random(-2, 2)
+              )
+              this.acc = p.createVector(0, 0)
+              this.color = p.color(
+                p.random(100, 255),
+                p.random(100, 255),
+                p.random(100, 255),
+                200
+              )
+            }
+
+            // Apply force to acceleration
+            applyForce(force: any) {
+              this.acc.add(force)
+            }
+
+            // Separation: steer to avoid crowding local flockmates
+            separate(boids: Boid[]) {
+              const controls = controlsRef.current
+              const steer = p.createVector(0, 0)
+              let count = 0
+
+              for (let other of boids) {
+                const d = Vector.dist(this.pos, other.pos)
+
+                if (other !== this && d > 0 && d < controls.separationDistance) {
+                  // Calculate vector pointing away from neighbor
+                  const diff = Vector.sub(this.pos, other.pos)
+                  diff.normalize()
+                  diff.div(d) // Weight by distance (closer = stronger)
+                  steer.add(diff)
+                  count++
+                }
+              }
+
+              if (count > 0) {
+                steer.div(count)
+              }
+
+              if (steer.mag() > 0) {
+                // Implement Reynolds: Steering = Desired - Velocity
+                steer.normalize()
+                steer.mult(controls.maxSpeed)
+                steer.sub(this.vel)
+                steer.limit(controls.maxForce)
+              }
+
+              return steer
+            }
+
+            // Alignment: steer towards the average heading of local flockmates
+            align(boids: Boid[]) {
+              const controls = controlsRef.current
+              const sum = p.createVector(0, 0)
+              let count = 0
+
+              for (let other of boids) {
+                const d = Vector.dist(this.pos, other.pos)
+
+                if (other !== this && d > 0 && d < controls.perceptionRadius) {
+                  sum.add(other.vel)
+                  count++
+                }
+              }
+
+              if (count > 0) {
+                sum.div(count)
+                sum.normalize()
+                sum.mult(controls.maxSpeed)
+
+                // Steering = Desired - Velocity
+                const steer = Vector.sub(sum, this.vel)
+                steer.limit(controls.maxForce)
+                return steer
+              }
+
+              return p.createVector(0, 0)
+            }
+
+            // Cohesion: steer to move toward the average position of local flockmates
+            cohere(boids: Boid[]) {
+              const controls = controlsRef.current
+              const sum = p.createVector(0, 0)
+              let count = 0
+
+              for (let other of boids) {
+                const d = Vector.dist(this.pos, other.pos)
+
+                if (other !== this && d > 0 && d < controls.perceptionRadius) {
+                  sum.add(other.pos)
+                  count++
+                }
+              }
+
+              if (count > 0) {
+                sum.div(count)
+                return this.seek(sum)
+              }
+
+              return p.createVector(0, 0)
+            }
+
+            // A method to seek a target
+            seek(target: any) {
+              const controls = controlsRef.current
+              const desired = Vector.sub(target, this.pos)
+              desired.normalize()
+              desired.mult(controls.maxSpeed)
+
+              const steer = Vector.sub(desired, this.vel)
+              steer.limit(controls.maxForce)
+              return steer
+            }
+
+            // Main flocking behavior
+            flock(boids: Boid[]) {
+              const controls = controlsRef.current
+
+              const sep = this.separate(boids)
+              const ali = this.align(boids)
+              const coh = this.cohere(boids)
+
+              // Weight the forces
+              sep.mult(controls.separationForce)
+              ali.mult(controls.alignmentForce)
+              coh.mult(controls.cohesionForce)
+
+              // Apply forces
+              this.applyForce(sep)
+              this.applyForce(ali)
+              this.applyForce(coh)
+            }
+
+            // Update position
+            update() {
+              const controls = controlsRef.current
+              if (controls.isPaused) return
+
+              // Update velocity
+              this.vel.add(this.acc)
+              // Limit speed
+              this.vel.limit(controls.maxSpeed)
+              this.pos.add(this.vel)
+              // Reset acceleration
+              this.acc.mult(0)
+
+              // Wrap around edges (toroidal topology)
+              this.wrap()
+            }
+
+            // Wrap around boundaries
+            wrap() {
+              if (this.pos.x < 0) this.pos.x = width
+              if (this.pos.y < 0) this.pos.y = height
+              if (this.pos.x > width) this.pos.x = 0
+              if (this.pos.y > height) this.pos.y = 0
+            }
+
+            // Draw the boid
+            display() {
+              const controls = controlsRef.current
+
+              // Draw perception radius if enabled
+              if (controls.showPerception) {
+                p.noFill()
+                p.stroke(this.color.levels[0], this.color.levels[1], this.color.levels[2], 50)
+                p.strokeWeight(1)
+                p.ellipse(this.pos.x, this.pos.y, controls.perceptionRadius * 2, controls.perceptionRadius * 2)
+
+                p.stroke(255, 0, 0, 50)
+                p.ellipse(this.pos.x, this.pos.y, controls.separationDistance * 2, controls.separationDistance * 2)
+              }
+
+              // Draw triangle pointing in direction of velocity
+              const angle = this.vel.heading()
+              const size = 8
+
+              p.push()
+              p.translate(this.pos.x, this.pos.y)
+              p.rotate(angle)
+
+              // Triangle body
+              p.fill(this.color)
+              p.stroke(this.color)
+              p.strokeWeight(1)
+
+              p.beginShape()
+              p.vertex(size, 0)
+              p.vertex(-size, size / 2)
+              p.vertex(-size, -size / 2)
+              p.endShape(p.CLOSE)
+
+              p.pop()
+            }
+          }
+
+          // Sketch state
+          let boids: Boid[] = []
+          const GRID_CELL_SIZE = 100
+
+          // Spatial grid for optimization
+          const buildSpatialGrid = () => {
+            const grid: Record<string, Boid[]> = {}
+
+            for (let boid of boids) {
+              const gridX = Math.floor(boid.pos.x / GRID_CELL_SIZE)
+              const gridY = Math.floor(boid.pos.y / GRID_CELL_SIZE)
+              const key = `${gridX},${gridY}`
+
+              if (!grid[key]) {
+                grid[key] = []
+              }
+              grid[key].push(boid)
+            }
+
+            return grid
+          }
+
+          const getNearbyBoids = (boid: Boid, grid: Record<string, Boid[]>) => {
+            const controls = controlsRef.current
+            const nearby: Boid[] = []
+            const gridX = Math.floor(boid.pos.x / GRID_CELL_SIZE)
+            const gridY = Math.floor(boid.pos.y / GRID_CELL_SIZE)
+
+            // Check current and neighboring cells
+            for (let dx = -1; dx <= 1; dx++) {
+              for (let dy = -1; dy <= 1; dy++) {
+                const key = `${gridX + dx},${gridY + dy}`
+                if (grid[key]) {
+                  for (let other of grid[key]) {
+                    const d = Vector.dist(boid.pos, other.pos)
+                    if (d < controls.perceptionRadius) {
+                      nearby.push(other)
+                    }
+                  }
+                }
+              }
+            }
+
+            return nearby
+          }
+
+          const resetBoids = () => {
+            const controls = controlsRef.current
+            boids = []
+
+            for (let i = 0; i < controls.boidCount; i++) {
+              boids.push(new Boid())
+            }
+          }
+
+          p.setup = () => {
+            const canvas = p.createCanvas(width, height)
+            canvas.parent(canvasRef.current)
+            canvas.style('display', 'block')
+            canvas.style('margin', '0 auto')
+
+            resetBoids()
+          }
+
+          p.draw = () => {
+            const controls = controlsRef.current
+
+            // Dark background for better visibility
+            p.background(20)
+
+            // Build spatial grid for performance
+            const spatialGrid = buildSpatialGrid()
+
+            // Update and display all boids
+            for (let boid of boids) {
+              // Get nearby boids for flocking calculation
+              const nearby = getNearbyBoids(boid, spatialGrid)
+
+              // Calculate flocking behavior with nearby boids only
+              boid.flock(nearby)
+              boid.update()
+              boid.display()
+            }
+
+            // Draw UI info
+            p.fill(255, 200)
+            p.noStroke()
+            p.textAlign(p.LEFT, p.TOP)
+            p.textSize(10)
+
+            const fps = Math.round(p.frameRate())
+            p.text(`FPS: ${fps}`, 10, 10)
+            p.text(`Boids: ${boids.length}`, 10, 25)
+            p.text(`Perception: ${controls.perceptionRadius}px`, 10, 40)
+
+            if (controls.isPaused) {
+              p.textAlign(p.CENTER, p.CENTER)
+              p.textSize(24)
+              p.fill(255, 0, 0, 150)
+              p.text('PAUSED', width/2, height/2)
+            }
+          }
+
+          p.keyPressed = () => {
+            switch (p.key.toLowerCase()) {
+              case ' ':
+                setIsPaused(prev => !prev)
+                break
+              case 'r':
+                resetBoids()
+                break
+              case 'p':
+                setShowPerception(prev => !prev)
+                break
+            }
+            return false
+          }
+
+          // Public method to reset boids
+          ;(p as any).resetBoids = resetBoids
+        }
+
+        if (!isMounted) return
+
+        p5 = new P5(sketch)
+
+        if (isMounted) {
+          setP5Instance(p5)
+        }
+      }
+    }
+
+    loadP5()
+
+    return () => {
+      isMounted = false
+      if (p5) {
+        p5.remove()
+      }
+      setP5Instance(null)
+      if (canvasRef.current) {
+        canvasRef.current.innerHTML = ''
+      }
+    }
+  }, [width, height, onError])
+
+  // Reset boids when count changes
+  useEffect(() => {
+    if (p5Instance && (p5Instance as any).resetBoids) {
+      ;(p5Instance as any).resetBoids()
+    }
+  }, [boidCount, p5Instance])
+
+  return (
+    <div className="flex flex-col items-center w-full gap-4">
+      {/* Canvas */}
+      <div ref={canvasRef} className="border border-gray-300 rounded-lg shadow-sm bg-black" />
+
+      {/* Controls */}
+      <div className="w-full max-w-6xl bg-white rounded-lg shadow-md p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Boid Count */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Boid Count: <span className="text-blue-600">{boidCount}</span>
+            </label>
+            <input
+              type="range"
+              min="10"
+              max="300"
+              value={boidCount}
+              onChange={(e) => setBoidCount(parseInt(e.target.value))}
+              className="w-full"
+            />
+          </div>
+
+          {/* Perception Radius */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Perception: <span className="text-blue-600">{perceptionRadius}px</span>
+            </label>
+            <input
+              type="range"
+              min="20"
+              max="150"
+              value={perceptionRadius}
+              onChange={(e) => setPerceptionRadius(parseInt(e.target.value))}
+              className="w-full"
+            />
+          </div>
+
+          {/* Separation Distance */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Separation: <span className="text-blue-600">{separationDistance}px</span>
+            </label>
+            <input
+              type="range"
+              min="10"
+              max="50"
+              value={separationDistance}
+              onChange={(e) => setSeparationDistance(parseInt(e.target.value))}
+              className="w-full"
+            />
+          </div>
+
+          {/* Max Speed */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Max Speed: <span className="text-blue-600">{maxSpeed}</span>
+            </label>
+            <input
+              type="range"
+              min="1"
+              max="10"
+              step="0.5"
+              value={maxSpeed}
+              onChange={(e) => setMaxSpeed(parseFloat(e.target.value))}
+              className="w-full"
+            />
+          </div>
+
+          {/* Separation Force */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Sep Force: <span className="text-blue-600">{separationForce.toFixed(1)}</span>
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="3"
+              step="0.1"
+              value={separationForce}
+              onChange={(e) => setSeparationForce(parseFloat(e.target.value))}
+              className="w-full"
+            />
+          </div>
+
+          {/* Alignment Force */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Align Force: <span className="text-blue-600">{alignmentForce.toFixed(1)}</span>
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="3"
+              step="0.1"
+              value={alignmentForce}
+              onChange={(e) => setAlignmentForce(parseFloat(e.target.value))}
+              className="w-full"
+            />
+          </div>
+
+          {/* Cohesion Force */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Cohesion Force: <span className="text-blue-600">{cohesionForce.toFixed(1)}</span>
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="3"
+              step="0.1"
+              value={cohesionForce}
+              onChange={(e) => setCohesionForce(parseFloat(e.target.value))}
+              className="w-full"
+            />
+          </div>
+
+          {/* Max Force */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Max Force: <span className="text-blue-600">{maxForce.toFixed(2)}</span>
+            </label>
+            <input
+              type="range"
+              min="0.05"
+              max="0.5"
+              step="0.05"
+              value={maxForce}
+              onChange={(e) => setMaxForce(parseFloat(e.target.value))}
+              className="w-full"
+            />
+          </div>
+        </div>
+
+        {/* Buttons */}
+        <div className="flex flex-wrap gap-3 mt-6">
+          <button
+            onClick={() => setIsPaused(!isPaused)}
+            className="btn px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            {isPaused ? 'Resume' : 'Pause'}
+          </button>
+          <button
+            onClick={() => setShowPerception(!showPerception)}
+            className={`btn px-4 py-2 rounded ${
+              showPerception
+                ? 'bg-green-500 text-white hover:bg-green-600'
+                : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+            }`}
+          >
+            Show Perception {showPerception ? 'ON' : 'OFF'}
+          </button>
+          <button
+            onClick={() => {
+              if (p5Instance && (p5Instance as any).resetBoids) {
+                ;(p5Instance as any).resetBoids()
+              }
+            }}
+            className="btn px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+          >
+            Reset
+          </button>
+        </div>
+
+        {/* Instructions */}
+        <div className="mt-6 text-sm text-gray-600 space-y-1">
+          <p><strong>Space:</strong> Pause/Resume</p>
+          <p><strong>R:</strong> Reset boids</p>
+          <p><strong>P:</strong> Toggle perception radius visualization</p>
+          <p className="mt-3 text-xs italic">
+            Flocking behavior emerges from three simple rules: separation (avoid crowding), alignment (steer with neighbors), and cohesion (move toward center of flock)
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}

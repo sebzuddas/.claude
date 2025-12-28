@@ -1,0 +1,16 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/components/visualizations/VectorField.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+    22→  const [showArrows, setShowArrows] = useState(true)
+    23→  const [gridDensity] = useState(20)
+    24→  const [bounds, setBounds] = useState<{ min: number[], max: number[] } | null>(null)
+    25→
+    26→  // Initial condition inputs for 3D
+    27→  const [ic3DX, setIc3DX] = useState('1.0')
+    28→  const [ic3DY, setIc3DY] = useState('1.0')
+    29→  const [ic3DZ, setIc3DZ] = useState('1.0')
+    30→
+    31→  // Simulation time control (5-60 seconds)
+    32→  const [simulationTime, setSimulationTime] = useState(20)
+    33→
+    34→  // Sync state to ref
+    35→  useEffect(() => {
+    36→    currentTimeIndexRef.current = currentTimeIndex

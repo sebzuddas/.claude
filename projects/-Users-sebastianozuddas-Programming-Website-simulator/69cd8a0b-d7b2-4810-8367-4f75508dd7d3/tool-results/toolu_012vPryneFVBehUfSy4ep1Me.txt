@@ -1,0 +1,25 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/lib/exportUtils.ts has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+    24→    onProgress,
+    25→    onComplete
+    26→  } = options
+    27→
+    28→  return new Promise(async (resolve, reject) => {
+    29→    try {
+    30→      // TODO: Fix gif.js dependency issue
+    31→      reject(new Error('GIF export temporarily disabled - gif.js dependency needs to be installed'))
+    32→      return
+    33→
+    34→      // Dynamically import gif.js
+    35→      // const GIF = (await import('gif.js')).default
+    36→
+    37→      // const gif = new GIF({
+    38→      //   workers: 2,
+    39→      //   quality: 10,
+    40→      //   width: canvas.width,
+    41→      //   height: canvas.height,
+    42→      //   workerScript: '/gif.worker.js' // Will need to be added to public folder
+    43→      // })
+    44→
+    45→      const totalFrames = duration * fps
+    46→      const frameDelay = 1000 / fps
+    47→      let capturedFrames = 0

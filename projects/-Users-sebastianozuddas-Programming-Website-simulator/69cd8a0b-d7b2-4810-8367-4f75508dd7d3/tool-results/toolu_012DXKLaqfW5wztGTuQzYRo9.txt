@@ -1,0 +1,160 @@
+     1→'use client'
+     2→
+     3→import { useState, useEffect } from 'react'
+     4→import VisualizationLayout from '@/components/ui/VisualizationLayout'
+     5→import HeatMap from '@/components/visualizations/HeatMap'
+     6→import ColorPaletteSelector from '@/components/ui/ColorPaletteSelector'
+     7→import FileUploadZone from '@/components/ui/FileUploadZone'
+     8→import MessageDisplay from '@/components/ui/MessageDisplay'
+     9→import CodeBlock from '@/components/ui/CodeBlock'
+    10→import { DataParser } from '@/lib/utils'
+    11→import type { HeatMapData, FileUploadResult } from '@/types'
+    12→
+    13→export default function HeatMapPage() {
+    14→  const [data, setData] = useState<HeatMapData | null>(null)
+    15→  const [colorPalette, setColorPalette] = useState('viridis')
+    16→  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' }>()
+    17→
+    18→  useEffect(() => {
+    19→    // Initialize with data from URL or demo data
+    20→    const urlData = DataParser.parseURLParams()
+    21→    
+    22→    if (urlData.error) {
+    23→      setMessage({ text: urlData.error, type: 'error' })
+    24→      return
+    25→    }
+    26→    
+    27→    if (urlData.demo || (!urlData.data)) {
+    28→      generateDemoData()
+    29→      setMessage({ text: 'Demo data loaded. Upload your own JSON file or use URL parameters.', type: 'success' })
+    30→    } else {
+    31→      setHeatMapData(urlData.data)
+    32→    }
+    33→    // eslint-disable-next-line react-hooks/exhaustive-deps
+    34→  }, [])
+    35→
+    36→  const generateDemoData = () => {
+    37→    const rows = 10
+    38→    const cols = 8
+    39→    const demoData: number[][] = []
+    40→    
+    41→    for (let i = 0; i < rows; i++) {
+    42→      const row: number[] = []
+    43→      for (let j = 0; j < cols; j++) {
+    44→        // Create some interesting patterns
+    45→        const value = Math.sin(i * 0.3) * Math.cos(j * 0.4) * 50 + 
+    46→                     Math.random() * 30 + 25
+    47→        row.push(Math.round(value * 10) / 10)
+    48→      }
+    49→      demoData.push(row)
+    50→    }
+    51→    
+    52→    setHeatMapData({
+    53→      data: demoData,
+    54→      title: 'Demo Heat Map',
+    55→      labels: {
+    56→        x: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'],
+    57→        y: ['Row 1', 'Row 2', 'Row 3', 'Row 4', 'Row 5', 'Row 6', 'Row 7', 'Row 8', 'Row 9', 'Row 10']
+    58→      }
+    59→    })
+    60→  }
+    61→
+    62→  const setHeatMapData = (newData: any) => {
+    63→    // Validate data
+    64→    if (!newData?.data || !Array.isArray(newData.data)) {
+    65→      setMessage({ text: 'Invalid data: missing required "data" field', type: 'error' })
+    66→      return
+    67→    }
+    68→
+    69→    setData(newData)
+    70→    setMessage({ text: 'Heat map data loaded successfully!', type: 'success' })
+    71→  }
+    72→
+    73→  const handleFileUpload = (result: FileUploadResult) => {
+    74→    if (result.error) {
+    75→      setMessage({ text: result.error, type: 'error' })
+    76→    } else if (result.data) {
+    77→      setHeatMapData(result.data)
+    78→    }
+    79→  }
+    80→
+    81→  const handleExport = () => {
+    82→    // This would need to be implemented in the P5 component
+    83→    setMessage({ text: 'Export functionality coming soon!', type: 'info' })
+    84→  }
+    85→
+    86→  return (
+    87→    <VisualizationLayout
+    88→      title="Heat Map Visualization"
+    89→      description="Visualize 2D data matrices with color-coded intensity"
+    90→    >
+    91→      {/* Controls */}
+    92→      <div className="controls">
+    93→        <ColorPaletteSelector
+    94→          value={colorPalette}
+    95→          onChange={setColorPalette}
+    96→          className="mr-4"
+    97→        />
+    98→        <button
+    99→          onClick={generateDemoData}
+   100→          className="btn mr-2"
+   101→        >
+   102→          Regenerate Demo Data
+   103→        </button>
+   104→        <button
+   105→          onClick={handleExport}
+   106→          className="btn"
+   107→        >
+   108→          Export as Image
+   109→        </button>
+   110→      </div>
+   111→
+   112→      {/* File Upload */}
+   113→      <FileUploadZone
+   114→        onFileUpload={handleFileUpload}
+   115→        description="Drop a JSON file here or click to select"
+   116→        className="w-full max-w-2xl"
+   117→      />
+   118→
+   119→      {/* Message Display */}
+   120→      {message && (
+   121→        <MessageDisplay
+   122→          message={message.text}
+   123→          type={message.type}
+   124→          onClose={() => setMessage(undefined)}
+   125→        />
+   126→      )}
+   127→
+   128→      {/* Visualization */}
+   129→      {data && (
+   130→        <div className="bg-white rounded-lg shadow-lg p-4">
+   131→          <HeatMap
+   132→            data={data}
+   133→            colorPalette={colorPalette}
+   134→            onError={(error) => setMessage({ text: error, type: 'error' })}
+   135→          />
+   136→        </div>
+   137→      )}
+   138→
+   139→      {/* Usage Instructions */}
+   140→      <div className="mt-8 max-w-4xl">
+   141→        <h3 className="text-lg font-semibold mb-4">Expected JSON Format:</h3>
+   142→        <CodeBlock
+   143→          code={{
+   144→            "data": [[1, 2, 3], [4, 5, 6], [7, 8, 9]],
+   145→            "labels": {
+   146→              "x": ["A", "B", "C"],
+   147→              "y": ["X", "Y", "Z"]
+   148→            },
+   149→            "colorScale": "viridis",
+   150→            "title": "Sample Heat Map"
+   151→          }}
+   152→        />
+   153→      </div>
+   154→    </VisualizationLayout>
+   155→  )
+   156→}
+
+<system-reminder>
+Whenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.
+</system-reminder>

@@ -1,0 +1,20 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/components/visualizations/SystemModel.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   266→              }
+   267→            })
+   268→          }
+   269→
+   270→          function drawEdges(p: any, edges: Edge[]) {
+   271→            edges.forEach(edge => {
+   272→              const { from, to, weight, flowRate, bidirectional, parallelOffset } = edge
+   273→
+   274→              // Arrow color based on current flow direction (not static weight)
+   275→              const isPositive = flowRate >= 0
+   276→              p.stroke(isPositive ? [50, 150, 50, 50] : [150, 50, 50, 50]) // Red/Green/Blue/Alpha
+   277→              p.strokeWeight(PIPE_WIDTH) // Pipe-like width
+   278→
+   279→              // Draw arrow (parallel pipe if bidirectional, straight otherwise)
+   280→              drawArrow(p, from, to, isPositive, bidirectional, parallelOffset)
+   281→
+   282→              // Calculate label position
+   283→              let midX, midY
+   284→              if (bidirectional) {

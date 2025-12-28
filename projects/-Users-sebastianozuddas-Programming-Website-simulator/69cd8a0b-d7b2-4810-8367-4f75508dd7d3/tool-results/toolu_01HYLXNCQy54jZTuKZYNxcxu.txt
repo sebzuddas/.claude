@@ -1,0 +1,44 @@
+   148→                })
+   149→              }
+   150→            }
+   151→
+   152→            p.frameRate(30)
+   153→          }
+   154→
+   155→          p.draw = () => {
+   156→            p.background(250)
+   157→
+   158→            if (simulationError) {
+   159→              p.fill(200, 50, 50)
+   160→              p.textSize(16)
+   161→              p.textAlign(p.CENTER, p.CENTER)
+   162→              p.text(simulationError, width / 2, height / 2)
+   163→              return
+   164→            }
+   165→
+   166→            if (!simulationRef.current || !data) {
+   167→              p.fill(150)
+   168→              p.textSize(16)
+   169→              p.textAlign(p.CENTER, p.CENTER)
+   170→              p.text('No simulation data', width / 2, (height - 100) / 2)
+   171→              return
+   172→            }
+   173→
+   174→            // Update node values based on current time
+   175→            updateNodeValues(nodes, simulationRef.current, currentTimeIndex)
+   176→            updateEdgeFlowRates(edges, nodes)
+   177→
+   178→            // Spawn particles based on flow rates
+   179→            if (p.millis() - lastParticleSpawn > 100) {
+   180→              spawnParticles(edges, particlePool)
+   181→              lastParticleSpawn = p.millis()
+   182→            }
+   183→
+   184→            // Update particles
+   185→            updateParticles(particlePool)
+   186→
+   187→            // Draw edges
+
+<system-reminder>
+Whenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.
+</system-reminder>

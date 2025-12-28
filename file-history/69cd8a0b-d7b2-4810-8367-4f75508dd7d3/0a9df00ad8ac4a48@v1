@@ -1,0 +1,429 @@
+# ABM JSON Model Specification Guide
+
+This guide describes how to create JSON configuration files for the Agent-Based Model (ABM) simulator. The format follows the ODD (Overview, Design concepts, and Details) protocol for describing agent-based models.
+
+## Table of Contents
+
+1. [Quick Start](#quick-start)
+2. [Model Structure](#model-structure)
+3. [Overview Section](#overview-section)
+4. [Design Concepts Section](#design-concepts-section)
+5. [Details Section](#details-section)
+6. [Expression Language](#expression-language)
+7. [Examples](#examples)
+
+---
+
+## Quick Start
+
+Here's a minimal ABM model:
+
+```json
+{
+  "schemaVersion": "1.0",
+  "overview": {
+    "purpose": "A simple agent simulation",
+    "entities": {
+      "componentTypes": [
+        { "name": "Position", "properties": { "x": { "type": "number" }, "y": { "type": "number" } } }
+      ],
+      "archetypes": [
+        { "name": "Agent", "components": { "Position": { "x": 0, "y": 0 } }, "visual": { "shape": "circle", "color": "#4285f4" } }
+      ]
+    },
+    "scales": {
+      "spatial": { "spatial": { "type": "continuous2D", "width": 600, "height": 400 }, "boundary": "toroidal" },
+      "temporal": { "dt": 0.1, "maxTicks": 1000 }
+    },
+    "processSchedule": [{ "system": "Movement", "order": "parallel" }]
+  },
+  "designConcepts": {
+    "interaction": { "rules": [] },
+    "observation": { "timeseries": [] }
+  },
+  "details": {
+    "initialization": {
+      "entities": [{ "archetype": "Agent", "count": 10, "position": { "type": "random" } }]
+    }
+  }
+}
+```
+
+---
+
+## Model Structure
+
+Every ABM model has three main sections following the ODD protocol:
+
+```json
+{
+  "schemaVersion": "1.0",
+  "overview": { ... },
+  "designConcepts": { ... },
+  "details": { ... },
+  "uiParameters": [ ... ]  // Optional
+}
+```
+
+---
+
+## Overview Section
+
+### Purpose
+
+A text description of what the model simulates:
+
+```json
+"purpose": "Simulate epidemic spread through a mobile population"
+```
+
+### Entities
+
+Define component types and agent archetypes:
+
+```json
+"entities": {
+  "componentTypes": [
+    {
+      "name": "Position",
+      "properties": {
+        "x": { "type": "number", "default": 0 },
+        "y": { "type": "number", "default": 0 }
+      }
+    },
+    {
+      "name": "Health",
+      "properties": {
+        "status": { "type": "enum", "enumValues": ["healthy", "sick", "recovered"], "default": "healthy" },
+        "infectionTime": { "type": "number", "default": 0 }
+      }
+    }
+  ],
+  "archetypes": [
+    {
+      "name": "Person",
+      "components": {
+        "Position": { "x": 0, "y": 0 },
+        "Health": { "status": "healthy" }
+      },
+      "visual": {
+        "shape": "circle",
+        "size": 5,
+        "color": "#34a853"
+      }
+    }
+  ]
+}
+```
+
+#### Supported Data Types
+
+- `number` - Numeric values
+- `string` - Text values
+- `boolean` - True/false
+- `enum` - One of a set of predefined values
+- `vector2D` - Object with `x` and `y` properties
+- `entityRef` - Reference to another entity
+- `entityRefArray` - Array of entity references
+
+#### Visual Configuration
+
+```json
+"visual": {
+  "shape": "circle",        // circle, square, triangle, diamond, icon
+  "size": 5,                // Radius or half-width
+  "color": "#4285f4",       // Hex color
+  "iconUrl": "...",         // URL for icon shape
+  "colorByState": {         // Dynamic coloring
+    "property": "Health.status",
+    "minColor": "#34a853",
+    "maxColor": "#ea4335"
+  }
+}
+```
+
+### Scales
+
+Define spatial and temporal parameters:
+
+```json
+"scales": {
+  "spatial": {
+    "spatial": {
+      "type": "continuous2D",  // or "grid2D"
+      "width": 600,
+      "height": 400,
+      "cellSize": 10           // For grid2D
+    },
+    "boundary": "toroidal",    // toroidal, bounded, or infinite
+    "features": {
+      "zones": [...],
+      "obstacles": [...]
+    }
+  },
+  "temporal": {
+    "dt": 0.1,                 // Time step
+    "maxTicks": 1000,          // Maximum simulation steps
+    "maxTime": 100             // Maximum simulation time
+  }
+}
+```
+
+### Process Schedule
+
+Define the order of system execution each tick:
+
+```json
+"processSchedule": [
+  { "system": "Steering", "order": "parallel" },
+  { "system": "Movement", "order": "parallel" },
+  { "system": "Interaction", "order": "sequential", "shuffle": true }
+]
+```
+
+Systems available:
+- `Steering` - Calculate steering forces
+- `Movement` - Update positions from velocities
+- `Interaction` or `Rules` - Execute interaction rules
+- `GridUpdate` - For cellular automata
+
+---
+
+## Design Concepts Section
+
+### Interaction Rules
+
+Rules define agent behavior using condition → effect logic:
+
+```json
+"interaction": {
+  "rules": [
+    {
+      "name": "infection",
+      "trigger": { "onProximity": { "radius": 15 } },
+      "appliesTo": { "eq": [{ "prop": "self.Health.status" }, "healthy"] },
+      "condition": { "eq": [{ "prop": "other.Health.status" }, "sick"] },
+      "effect": {
+        "probability": {
+          "chance": 0.1,
+          "effect": { "set": { "target": "self.Health.status", "value": "sick" } }
+        }
+      }
+    }
+  ]
+}
+```
+
+#### Triggers
+
+- `{ "everyTick": true }` - Run every simulation step
+- `{ "onProximity": { "radius": 20 } }` - When entities are within radius
+- `{ "onStateChange": { "property": "Health.status" } }` - When property changes
+- `{ "onEvent": { "event": "collision" } }` - When event is emitted
+
+### Observation
+
+Define what data to collect:
+
+```json
+"observation": {
+  "timeseries": [
+    { "name": "population", "query": { "count": {} } },
+    { "name": "infected", "query": { "count": { "filter": { "eq": [{ "prop": "Health.status" }, "sick"] } } } }
+  ],
+  "events": ["infection", "death", "birth"]
+}
+```
+
+### Stochasticity
+
+```json
+"stochasticity": {
+  "seed": 12345,
+  "description": "Random initial positions and infection probability"
+}
+```
+
+---
+
+## Details Section
+
+### Initialization
+
+Spawn initial entities:
+
+```json
+"initialization": {
+  "entities": [
+    {
+      "archetype": "Person",
+      "count": 100,
+      "position": {
+        "type": "random",
+        "region": { "min": { "x": 0, "y": 0 }, "max": { "x": 600, "y": 400 } }
+      },
+      "propertyVariation": {
+        "Velocity.x": { "distribution": "uniform", "min": -10, "max": 10 }
+      }
+    }
+  ]
+}
+```
+
+#### Position Types
+
+- `random` - Random within region
+- `grid` - Arranged in a grid pattern
+- `cluster` - Clustered around a point
+- `fixed` - Specific coordinates
+
+#### Property Variation
+
+- `uniform` - Random between min and max
+- `normal` - Normal distribution with mean and stdDev
+- `fixed` - Specific value
+
+---
+
+## Expression Language
+
+The ABM uses a safe expression language (no JavaScript code execution).
+
+### Condition Expressions
+
+```json
+// Logical operators
+{ "and": [condition1, condition2, ...] }
+{ "or": [condition1, condition2, ...] }
+{ "not": condition }
+
+// Comparison operators
+{ "eq": [value1, value2] }      // Equal
+{ "neq": [value1, value2] }     // Not equal
+{ "gt": [value1, value2] }      // Greater than
+{ "gte": [value1, value2] }     // Greater than or equal
+{ "lt": [value1, value2] }      // Less than
+{ "lte": [value1, value2] }     // Less than or equal
+
+// Special conditions
+{ "hasComponent": "Health" }
+{ "inZone": "safeZone" }
+```
+
+### Value Expressions
+
+```json
+// Property access
+{ "prop": "self.Health.value" }
+{ "prop": "other.Position.x" }
+{ "prop": "tick" }
+
+// Arithmetic
+{ "add": [value1, value2] }
+{ "sub": [value1, value2] }
+{ "mul": [value1, value2] }
+{ "div": [value1, value2] }
+
+// Math functions
+{ "abs": value }
+{ "floor": value }
+{ "min": [v1, v2, ...] }
+{ "max": [v1, v2, ...] }
+{ "clamp": { "value": v, "min": 0, "max": 100 } }
+{ "lerp": { "a": 0, "b": 100, "t": 0.5 } }
+
+// Random
+{ "random": { "min": 0, "max": 1 } }
+
+// Aggregation
+{ "count": { "filter": condition } }
+{ "average": { "property": "Health.value" } }
+{ "sum": { "property": "Energy.value" } }
+```
+
+### Effect Expressions
+
+```json
+// Set property
+{ "set": { "target": "self.Health.status", "value": "sick" } }
+
+// Modify number
+{ "increment": { "target": "self.Energy.value", "amount": 10 } }
+{ "decrement": { "target": "self.Energy.value", "amount": 5 } }
+
+// State transition
+{ "transition": { "target": "self.State.current", "to": "fleeing" } }
+
+// Spawn entity
+{ "spawn": { "archetype": "Child", "position": { "prop": "self.Position" } } }
+
+// Destroy entity
+{ "destroy": { "target": "self" } }
+{ "destroy": { "target": "other" } }
+
+// Emit event
+{ "emit": { "event": "collision", "data": { "force": 10 } } }
+
+// Sequence of effects
+{ "sequence": [effect1, effect2, ...] }
+
+// Conditional effect
+{ "conditional": { "condition": cond, "then": effect1, "else": effect2 } }
+
+// Probabilistic effect
+{ "probability": { "chance": 0.1, "effect": effect } }
+```
+
+---
+
+## Examples
+
+### Flocking (Boids)
+
+Key components:
+- `SteeringBehavior` with separation, alignment, cohesion rules
+- Toroidal boundaries
+
+### SIR Epidemic
+
+Key components:
+- `Health` with status (S/I/R) and infectionTime
+- Proximity-based infection rule
+- Time-based recovery rule
+
+### Predator-Prey
+
+Key components:
+- `Species` (prey/predator)
+- `Energy` for survival and reproduction
+- Hunt, reproduce, and death rules
+
+---
+
+## LLM Prompt Template
+
+When generating ABM models from descriptions, use this system prompt:
+
+```
+You are an ABM model generator. Given a description of a system, generate a valid JSON model following the ODD protocol structure with these sections:
+
+1. overview: purpose, entities (componentTypes + archetypes), scales (spatial + temporal), processSchedule
+2. designConcepts: sensing, interaction (rules), stochasticity, observation
+3. details: initialization (entity spawning)
+
+Rules must use the expression language - no JavaScript code. Use condition/effect trees with operators like eq, gt, and, set, increment, probability, etc.
+
+Output only valid JSON, no explanations.
+```
+
+User prompt template:
+```
+Create an ABM model for the following scenario:
+
+{{ $json.newsTextBody }}
+
+Focus on:
+1. Identifying the key agents and their properties
+2. Defining interaction rules between agents
+3. Specifying what metrics to observe over time
+```

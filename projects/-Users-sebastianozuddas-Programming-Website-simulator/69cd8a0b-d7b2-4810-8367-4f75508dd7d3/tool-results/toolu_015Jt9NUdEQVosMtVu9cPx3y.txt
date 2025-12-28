@@ -1,0 +1,104 @@
+     1→/**
+     2→ * PIXI.js Renderer for ABM
+     3→ *
+     4→ * Handles WebGL-based rendering of:
+     5→ * - Agents (circles, shapes, icons)
+     6→ * - Environment (grid, zones, obstacles)
+     7→ * - Trails
+     8→ * - Selection/highlighting
+     9→ */
+    10→
+    11→import type {
+    12→  Entity,
+    13→  EntityId,
+    14→  Vector2D,
+    15→  VisualConfig,
+    16→  EnvironmentConfig,
+    17→  ZoneDefinition,
+    18→  ObstacleDefinition
+    19→} from '../types'
+    20→import { Entity as EntityClass } from '../core/ecs'
+    21→
+    22→// PIXI.js types - we'll dynamically import PIXI
+    23→type Application = any
+    24→type Container = any
+    25→type Graphics = any
+    26→type Text = any
+    27→type Sprite = any
+    28→
+    29→// =============================================================================
+    30→// COLOR UTILITIES
+    31→// =============================================================================
+    32→
+    33→function hexToNumber(hex: string): number {
+    34→  // Remove # if present
+    35→  const cleaned = hex.replace('#', '')
+    36→  return parseInt(cleaned, 16)
+    37→}
+    38→
+    39→function interpolateColor(color1: string, color2: string, t: number): number {
+    40→  const c1 = hexToNumber(color1)
+    41→  const c2 = hexToNumber(color2)
+    42→
+    43→  const r1 = (c1 >> 16) & 0xff
+    44→  const g1 = (c1 >> 8) & 0xff
+    45→  const b1 = c1 & 0xff
+    46→
+    47→  const r2 = (c2 >> 16) & 0xff
+    48→  const g2 = (c2 >> 8) & 0xff
+    49→  const b2 = c2 & 0xff
+    50→
+    51→  const r = Math.round(r1 + (r2 - r1) * t)
+    52→  const g = Math.round(g1 + (g2 - g1) * t)
+    53→  const b = Math.round(b1 + (b2 - b1) * t)
+    54→
+    55→  return (r << 16) | (g << 8) | b
+    56→}
+    57→
+    58→// Default color palette for agent groups
+    59→const DEFAULT_COLORS = [
+    60→  0x4285f4, // Blue
+    61→  0xea4335, // Red
+    62→  0xfbbc04, // Yellow
+    63→  0x34a853, // Green
+    64→  0xff6d01, // Orange
+    65→  0x46bdc6, // Teal
+    66→  0x7b1fa2, // Purple
+    67→  0x795548, // Brown
+    68→]
+    69→
+    70→// =============================================================================
+    71→// RENDERER CONFIG
+    72→// =============================================================================
+    73→
+    74→export interface RendererConfig {
+    75→  width: number
+    76→  height: number
+    77→  backgroundColor?: string
+    78→  showGrid?: boolean
+    79→  showZones?: boolean
+    80→  showTrails?: boolean
+    81→  trailLength?: number
+    82→  gridOpacity?: number
+    83→}
+    84→
+    85→// =============================================================================
+    86→// PIXI RENDERER
+    87→// =============================================================================
+    88→
+    89→export class ABMRenderer {
+    90→  private app: Application | null = null
+    91→  private container: HTMLElement | null = null
+    92→  private agentContainer: Container | null = null
+    93→  private environmentContainer: Container | null = null
+    94→  private trailContainer: Container | null = null
+    95→  private uiContainer: Container | null = null
+    96→
+    97→  private agentGraphics: Map<EntityId, Graphics> = new Map()
+    98→  private trailPoints: Map<EntityId, Vector2D[]> = new Map()
+    99→  private trackedEntityId: EntityId | null = null
+   100→
+
+<system-reminder>
+Whenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.
+</system-reminder>

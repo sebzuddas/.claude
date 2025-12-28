@@ -1,0 +1,28 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/components/visualizations/SystemModel.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   742→      }
+   743→    }
+   744→  }
+   745→
+   746→  // Detect bidirectional edges and mark them for parallel pipe rendering
+   747→  for (let i = 0; i < edges.length; i++) {
+   748→    const edge1 = edges[i]
+   749→
+   750→    // Look for reverse edge
+   751→    for (let j = i + 1; j < edges.length; j++) {
+   752→      const edge2 = edges[j]
+   753→
+   754→      // Check if edge2 goes in the opposite direction
+   755→      if (edge1.from.id === edge2.to.id && edge1.to.id === edge2.from.id) {
+   756→        // Bidirectional edges found! Draw as parallel pipes
+   757→        edge1.curved = true
+   758→        edge1.curveOffset = BIDIRECTIONAL_OFFSET
+   759→        edge2.curved = true
+   760→        edge2.curveOffset = -BIDIRECTIONAL_OFFSET // Opposite side
+   761→        break
+   762→      }
+   763→    }
+   764→  }
+   765→
+   766→  return { nodes, edges }
+   767→}
+   768→

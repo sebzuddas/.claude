@@ -1,0 +1,1734 @@
+     1→# Data Visualization Platform - Next.js Edition
+     2→
+     3→## Project Overview
+     4→A modern data visualization platform built with Next.js 15, React 18, TypeScript, and P5.js. Provides interactive data visualizations including heat maps, scatter plots, particle systems, and more. Configured for static export to GitHub Pages.
+     5→
+     6→## Tech Stack
+     7→
+     8→### Frontend Framework
+     9→- **Next.js 15** - React framework with App Router
+    10→- **React 18** - UI library with hooks and modern patterns
+    11→- **TypeScript** - Type-safe development
+    12→- **Tailwind CSS** - Utility-first styling
+    13→
+    14→### Visualization
+    15→- **P5.js** - Creative coding library for visualizations
+    16→- **Client-side rendering** - All visualizations render in browser
+    17→
+    18→### Build & Deploy
+    19→- **Static Export** - `output: 'export'` for GitHub Pages
+    20→- **GitHub Pages** - Static hosting with CDN
+    21→- **No server-side dependencies** - Pure client-side application
+    22→
+    23→## Core Features
+    24→
+    25→### 1. Interactive Visualizations
+    26→- **Heat Maps** - `/heatmap` - 2D data matrices with color-coded intensity
+    27→- **Scatter Plots** - `/scatter` - Plot relationships between variables
+    28→- **Geospatial Data** - `/geospatial` - Map-based visualizations
+    29→- **Time Series** - `/timeseries` - Data changes over time
+    30→- **Network Graphs** - `/network` - Connections and relationships
+    31→- **Bar Charts** - `/barchart` - Categorical data comparison
+    32→
+    33→### 2. System Models & Simulations
+    34→- **State-Space System** - `/systemmodel` - Discrete-time system simulation with stocks and flows
+    35→- **Vector Field Visualizer** - `/vectorfield` - 2D/3D vector field visualization with trajectory integration
+    36→- **State Space Visualizer** - `/statespace` - Phase portraits and trajectory visualization
+    37→- **Particle System** - `/particles` - Physics-based particle simulation
+    38→- **Flocking behaviour** - `/flocking` - Emergent group behavior simulation
+    39→
+    40→### 3. Data Input Methods
+    41→1. **URL Parameters** - JSON data encoded in query string
+    42→2. **File Upload** - Drag & drop JSON files with validation
+    43→3. **PostMessage API** - For iframe embedding and external communication
+    44→4. **Demo Data** - Built-in example datasets for each visualization
+    45→
+    46→### 4. Theming & Customization
+    47→- **Color Palettes** - Multiple built-in palettes (Viridis, Plasma, Inferno, etc.)
+    48→- **Typography** - Theme-based font sizing from `color-palettes.json`
+    49→- **Responsive Design** - Adapts to different screen sizes
+    50→
+    51→## Architecture
+    52→
+    53→### Directory Structure
+    54→```
+    55→/simulator
+    56→├── src/
+    57→│   ├── app/                    # Next.js App Router pages
+    58→│   │   ├── page.tsx           # Home page / visualization gallery
+    59→│   │   ├── layout.tsx         # Root layout with metadata
+    60→│   │   ├── heatmap/
+    61→│   │   │   └── page.tsx       # Heat map visualization page
+    62→│   │   ├── systemmodel/
+    63→│   │   │   └── page.tsx       # System model simulator page
+    64→│   │   ├── vectorfield/
+    65→│   │   │   └── page.tsx       # Vector field visualizer page
+    66→│   │   ├── statespace/
+    67→│   │   │   └── page.tsx       # State space/phase portrait page
+    68→│   │   └── globals.css        # Global styles + Tailwind
+    69→│   ├── components/
+    70→│   │   ├── visualizations/
+    71→│   │   │   ├── HeatMap.tsx    # P5.js heat map component
+    72→│   │   │   ├── SystemModel.tsx # System simulator with stocks & flows
+    73→│   │   │   └── StateSpaceVisualization.tsx # Phase portrait viewer
+    74→│   │   └── ui/
+    75→│   │       ├── VisualizationLayout.tsx
+    76→│   │       ├── ColorPaletteSelector.tsx
+    77→│   │       ├── FileUploadZone.tsx
+    78→│   │       └── MessageDisplay.tsx
+    79→│   ├── lib/
+    80→│   │   └── utils.ts           # Utilities (ColorUtils, DataParser, etc.)
+    81→│   ├── types/
+    82→│   │   └── index.ts           # TypeScript type definitions
+    83→│   └── public/
+    84→│       └── data/
+    85→│           └── color-palettes.json  # Theme configuration
+    86→├── backup/                     # Legacy vanilla JS version
+    87→├── next.config.js             # Next.js configuration
+    88→├── tailwind.config.ts         # Tailwind CSS configuration
+    89→└── package.json
+    90→```
+    91→
+    92→### Component Architecture
+    93→
+    94→#### HeatMap Component (`/src/components/visualizations/HeatMap.tsx`)
+    95→
+    96→**Key Implementation Details:**
+    97→- Uses P5.js in instance mode within React
+    98→- Loads theme configuration asynchronously for font sizes
+    99→- Uses `paletteRef` for color palette to avoid re-renders
+   100→- Implements `p.noLoop()` for static visualizations
+   101→- Properly cleans up P5 instances on unmount
+   102→
+   103→**Memory Leak Fix (Dec 2025):**
+   104→The component previously had an infinite loop caused by including `fontSizes` state in the useEffect dependency array while also modifying it within the effect. This created:
+   105→- Thousands of P5.js instances per second
+   106→- Runaway memory consumption (94+ GB observed)
+   107→- Browser crashes
+   108→
+   109→**Solution:**
+   110→- Removed `fontSizes` state entirely
+   111→- Font sizes loaded as local variables in the effect
+   112→- P5 sketch captures these variables in closure
+   113→- useEffect dependencies: `[data, width, height, onError]` only
+   114→- No circular dependency = no infinite loop
+   115→
+   116→**Code Pattern:**
+   117→```typescript
+   118→useEffect(() => {
+   119→  let p5: any
+   120→  let isMounted = true
+   121→
+   122→  const loadP5 = async () => {
+   123→    // Load font sizes as local variables (not state)
+   124→    let labelSize = 12
+   125→    let valueSize = 10
+   126→
+   127→    try {
+   128→      const [loadedLabelSize, loadedValueSize] = await Promise.all([
+   129→        TypographyUtils.getVisualizationFontSize('heatmap', 'labelSize'),
+   130→        TypographyUtils.getVisualizationFontSize('heatmap', 'fontSize')
+   131→      ])
+   132→      labelSize = loadedLabelSize
+   133→      valueSize = loadedValueSize
+   134→    } catch (error) {
+   135→      console.warn('Using default font sizes')
+   136→    }
+   137→
+   138→    // Create P5 sketch using local variables
+   139→    const sketch = (p: any) => {
+   140→      p.setup = () => {
+   141→        // ... setup code
+   142→        p.noLoop() // Static visualization
+   143→      }
+   144→
+   145→      p.draw = () => {
+   146→        // Uses labelSize and valueSize from closure
+   147→      }
+   148→    }
+   149→
+   150→    p5 = new P5(sketch)
+   151→  }
+   152→
+   153→  loadP5()
+   154→
+   155→  return () => {
+   156→    isMounted = false
+   157→    if (p5) p5.remove()
+   158→  }
+   159→}, [data, width, height, onError]) // No fontSizes!
+   160→```
+   161→
+   162→#### SystemModel Component (`/src/components/visualizations/SystemModel.tsx`)
+   163→
+   164→**Purpose**: Simulates discrete-time state-space systems and visualizes them as stocks-and-flows diagrams with animated particles.
+   165→
+   166→**Key Features:**
+   167→- **Force-directed graph layout** - States positioned based on A matrix structure
+   168→- **Draggable nodes** - Click and drag any node to reposition
+   169→- **Interactive hover info** - Shows connectivity metrics, flow rates, and connections
+   170→- **Animated flow particles** - Variable velocity based on flow magnitude
+   171→- **Bidirectional edge handling** - Parallel pipes for reverse connections
+   172→- **Export capabilities** - CSV, JSON, copy current state
+   173→- **Direct navigation** - "View Phase Portrait" button to State Space Visualizer
+   174→
+   175→**Implementation Patterns:**
+   176→```typescript
+   177→// Use refs to avoid P5 re-mounting on state changes
+   178→const currentTimeIndexRef = useRef(0)
+   179→const [currentTimeIndex, setCurrentTimeIndex] = useState(0)
+   180→
+   181→useEffect(() => {
+   182→  currentTimeIndexRef.current = currentTimeIndex
+   183→}, [currentTimeIndex])
+   184→
+   185→// P5 reads from ref instead of state
+   186→p.draw = () => {
+   187→  const idx = currentTimeIndexRef.current // No re-mount!
+   188→  // ... use idx
+   189→}
+   190→```
+   191→
+   192→**Force-Directed Layout:**
+   193→- Initializes states in circle
+   194→- Spring forces between connected nodes (proportional to |A[i][j]|)
+   195→- Repulsion forces prevent overlap
+   196→- Centering force keeps layout bounded
+   197→- 300 iterations for stable configuration
+   198→
+   199→**Bidirectional Edge Detection:**
+   200→```typescript
+   201→// Build adjacency map
+   202→const edgeMap = new Map<string, Edge>()
+   203→edges.forEach(edge => {
+   204→  edgeMap.set(`${edge.from.id}->${edge.to.id}`, edge)
+   205→})
+   206→
+   207→// Detect reverse edges
+   208→edges.forEach(edge => {
+   209→  if (edge.from.id === edge.to.id) return // Skip self-loops
+   210→
+   211→  const reverseKey = `${edge.to.id}->${edge.from.id}`
+   212→  if (edgeMap.get(reverseKey)) {
+   213→    // Mark as bidirectional with parallel offset
+   214→    edge.bidirectional = true
+   215→    edge.parallelOffset = BIDIRECTIONAL_OFFSET
+   216→  }
+   217→})
+   218→```
+   219→
+   220→**Critical Learning - Conditional Rendering vs Disabled:**
+   221→Initially used `disabled={!hasData}` for export buttons. Problem: buttons visible but unusable created confusion.
+   222→
+   223→Solution: Conditional rendering for primary actions
+   224→```typescript
+   225→{hasSimulationData && (
+   226→  <button onClick={openInStateSpaceVisualizer}>
+   227→    🎨 View Phase Portrait
+   228→  </button>
+   229→)}
+   230→```
+   231→
+   232→Benefits:
+   233→- Clearer UI - button only appears when functional
+   234→- Prevents errors - no risk of clicking when no data
+   235→- Better UX - users see what's available
+   236→
+   237→#### StateSpaceVisualization Component (`/src/components/visualizations/StateSpaceVisualization.tsx`)
+   238→
+   239→**Purpose**: Displays phase portraits (state vs state plots) from time series data.
+   240→
+   241→**Key Features:**
+   242→- **Multi-plot grid** - Shows all state pairs (upper triangle only)
+   243→- **Interactive state selection** - Toggle which states to visualize
+   244→- **Trajectory trails** - Adjustable length showing recent history
+   245→- **Current point tracking** - Red dot shows current position
+   246→- **Complete trajectory** - Faint gray line shows full path
+   247→- **Dual format support** - Accepts simple JSON or System Simulator exports
+   248→
+   249→**Data Integration:**
+   250→```typescript
+   251→// Accepts System Simulator export format
+   252→interface SystemSimulatorExport {
+   253→  metadata?: { title, dt, timeHorizon }
+   254→  system?: { A, B, C, D, labels }
+   255→  results: { t, x, u, y }  // Extract x and t for phase portrait
+   256→}
+   257→
+   258→// Or simple format
+   259→interface StateSpaceData {
+   260→  t: number[]
+   261→  x: number[][]  // [timeStep][stateIndex]
+   262→  labels?: string[]
+   263→  title?: string
+   264→}
+   265→```
+   266→
+   267→**SessionStorage Integration:**
+   268→Seamless navigation from System Simulator:
+   269→```typescript
+   270→// In SystemModel.tsx
+   271→const openInStateSpaceVisualizer = () => {
+   272→  const stateSpaceData = {
+   273→    t: simulationRef.current.t,
+   274→    x: simulationRef.current.x,
+   275→    labels: data.labels?.states,
+   276→    title: data.title
+   277→  }
+   278→  sessionStorage.setItem('stateSpaceData', JSON.stringify(stateSpaceData))
+   279→  router.push('/statespace')
+   280→}
+   281→
+   282→// In statespace/page.tsx
+   283→useEffect(() => {
+   284→  const sessionData = sessionStorage.getItem('stateSpaceData')
+   285→  if (sessionData) {
+   286→    const parsedData = JSON.parse(sessionData)
+   287→    setStateSpaceData(parsedData)
+   288→    sessionStorage.removeItem('stateSpaceData') // Clear after use
+   289→  }
+   290→}, [])
+   291→```
+   292→
+   293→**Grid Layout Calculation:**
+   294→For n selected states, shows n(n-1)/2 plots (upper triangle):
+   295→```typescript
+   296→const plotsPerRow = Math.ceil(Math.sqrt(gridSize * (gridSize - 1) / 2))
+   297→const plotWidth = width / plotsPerRow
+   298→const plotHeight = height / Math.ceil((gridSize * (gridSize - 1) / 2) / plotsPerRow)
+   299→
+   300→// Draw only i < j pairs
+   301→for (let i = 0; i < selected.length; i++) {
+   302→  for (let j = i + 1; j < selected.length; j++) {
+   303→    drawPhasePlot(stateI, stateJ, ...)
+   304→  }
+   305→}
+   306→```
+   307→
+   308→#### VectorField Component (`/src/components/visualizations/VectorField.tsx`)
+   309→
+   310→**Purpose**: Visualizes 2D and 3D vector fields with trajectory integration for linear and nonlinear dynamical systems.
+   311→
+   312→**Key Features:**
+   313→- **2D/3D rendering** - Automatic mode selection based on system dimension
+   314→- **Vector field display** - Normalized arrows color-coded by magnitude (blue=low, red=high)
+   315→- **Interactive trajectory addition** - Click (2D) or input fields (3D) to add trajectories
+   316→- **RK4 integration** - Accurate trajectory computation using 4th-order Runge-Kutta
+   317→- **Configurable simulation time** - User-adjustable from 5-60 seconds
+   318→- **Playback controls** - Animation with timeline scrubber
+   319→- **Color legend** - Visual (2D) or text (3D) explanation of magnitude colors
+   320→- **Cross-page navigation** - Integrated with System Simulator and State Space Visualizer
+   321→
+   322→**Data Format:**
+   323→```typescript
+   324→interface VectorFieldData {
+   325→  // System definition (choose one)
+   326→  A?: number[][]                    // Linear: dx/dt = Ax
+   327→  f?: (x: number[]) => number[]     // Nonlinear: dx/dt = f(x)
+   328→
+   329→  // Metadata
+   330→  labels?: string[]                 // State labels
+   331→  title?: string
+   332→
+   333→  // Display options
+   334→  dimension?: 2 | 3                 // 2D or 3D visualization
+   335→  selectedStates?: number[]         // Which states to visualize
+   336→
+   337→  // Bounds (auto-calculated if not provided)
+   338→  bounds?: {
+   339→    min: number[]
+   340→    max: number[]
+   341→  }
+   342→}
+   343→
+   344→interface VectorFieldTrajectory {
+   345→  id: string
+   346→  x0: number[]                      // Initial condition
+   347→  points: number[][]                // Trajectory points [time][state]
+   348→  t: number[]                       // Time points
+   349→  color: string                     // Display color
+   350→}
+   351→```
+   352→
+   353→**Implementation Highlights:**
+   354→
+   355→1. **2D Click-to-Add Trajectories:**
+   356→```typescript
+   357→p.mousePressed = () => {
+   358→  if (!is3D && p.mouseX > 50 && p.mouseX < width - 50) {
+   359→    // Inverse map with Y-axis flip for mathematical convention
+   360→    const x = p.map(p.mouseX, 50, width - 50, xMin, xMax)
+   361→    const y = p.map(p.mouseY, height - 200, 50, yMin, yMax)  // Note: inverted!
+   362→
+   363→    integrateTrajectory([x, y])
+   364→  }
+   365→}
+   366→```
+   367→
+   368→2. **3D Input Fields:**
+   369→```typescript
+   370→const handleAdd3DTrajectory = () => {
+   371→  // Parse and validate input coordinates
+   372→  const x = parseFloat(ic3DX)
+   373→  const y = parseFloat(ic3DY)
+   374→  const z = parseFloat(ic3DZ)
+   375→
+   376→  // Build full state vector
+   377→  const fullState = new Array(n).fill(0)
+   378→  fullState[selectedStates[0]] = x
+   379→  fullState[selectedStates[1]] = y
+   380→  fullState[selectedStates[2]] = z
+   381→
+   382→  // Integrate using RK4
+   383→  integrateTrajectory(fullState)
+   384→}
+   385→```
+   386→
+   387→3. **RK4 Integration:**
+   388→```typescript
+   389→for (let i = 0; i < steps; i++) {
+   390→  t.push(i * dt)
+   391→  points.push([...state])
+   392→
+   393→  // 4th-order Runge-Kutta
+   394→  const k1 = evaluateSystem(state)
+   395→  const k2 = evaluateSystem(state.map((si, j) => si + 0.5 * dt * k1[j]))
+   396→  const k3 = evaluateSystem(state.map((si, j) => si + 0.5 * dt * k2[j]))
+   397→  const k4 = evaluateSystem(state.map((si, j) => si + dt * k3[j]))
+   398→
+   399→  state = state.map((si, j) =>
+   400→    si + (dt / 6) * (k1[j] + 2 * k2[j] + 2 * k3[j] + k4[j])
+   401→  )
+   402→}
+   403→```
+   404→
+   405→4. **Color Coding by Magnitude:**
+   406→```typescript
+   407→function magnitudeToColor(mag: number, maxMag: number): [number, number, number] {
+   408→  const normalized = Math.min(mag / (maxMag || 1), 1)
+   409→  const r = Math.floor(normalized * 255)  // Red for high
+   410→  const b = Math.floor((1 - normalized) * 255)  // Blue for low
+   411→  return [r, 100, b]
+   412→}
+   413→```
+   414→
+   415→5. **Auto-Calculated Bounds:**
+   416→```typescript
+   417→function calculateBounds(data: VectorFieldData) {
+   418→  if (data.A) {
+   419→    // For linear systems: estimate from A matrix magnitude
+   420→    let maxVal = 0
+   421→    for (let i = 0; i < n; i++) {
+   422→      for (let j = 0; j < n; j++) {
+   423→        maxVal = Math.max(maxVal, Math.abs(data.A[i][j]))
+   424→      }
+   425→    }
+   426→    const bound = Math.max(5, maxVal * 3)
+   427→    return {
+   428→      min: new Array(n).fill(-bound),
+   429→      max: new Array(n).fill(bound)
+   430→    }
+   431→  }
+   432→  // Default for nonlinear systems
+   433→  return { min: [-10, -10, -10], max: [10, 10, 10] }
+   434→}
+   435→```
+   436→
+   437→**SessionStorage Integration:**
+   438→```typescript
+   439→// From System Simulator
+   440→const openInVectorField = () => {
+   441→  const vectorFieldData = {
+   442→    A: data.A,
+   443→    labels: data.labels?.states,
+   444→    title: data.title || 'System Vector Field',
+   445→    dimension: data.A.length <= 2 ? 2 : 3
+   446→  }
+   447→  sessionStorage.setItem('vectorFieldData', JSON.stringify(vectorFieldData))
+   448→  router.push('/vectorfield')
+   449→}
+   450→
+   451→// Also stores system matrix when navigating to State Space
+   452→sessionStorage.setItem('systemMatrix', JSON.stringify({ A, labels, title }))
+   453→```
+   454→
+   455→**Demo Systems:**
+   456→
+   457→1. **Mass-Spring-Damper (2D):**
+   458→```typescript
+   459→const k = 4, m = 1, c = 0.5
+   460→const A = [
+   461→  [0, 1],
+   462→  [-k/m, -c/m]
+   463→]
+   464→// Shows spiral convergence to equilibrium
+   465→```
+   466→
+   467→2. **Lorenz Attractor (3D):**
+   468→```typescript
+   469→const sigma = 10, rho = 28, beta = 8/3
+   470→const f = (x: number[]) => {
+   471→  const [x1, x2, x3] = x
+   472→  return [
+   473→    sigma * (x2 - x1),
+   474→    x1 * (rho - x3) - x2,
+   475→    x1 * x2 - beta * x3
+   476→  ]
+   477→}
+   478→// Famous chaotic system with butterfly attractor
+   479→```
+   480→
+   481→**Key Learnings:**
+   482→
+   483→1. **Y-Axis Inversion Bug** ⚠️
+   484→   - P5.js coordinates: y increases downward
+   485→   - Math convention: y increases upward
+   486→   - **Fix**: Inverse mapping must flip both directions
+   487→   ```typescript
+   488→   // Forward: state → canvas
+   489→   const mapY = (y: number) => p.map(y, yMin, yMax, height-200, 50)
+   490→
+   491→   // Inverse: canvas → state (MUST match forward flip!)
+   492→   const y = p.map(p.mouseY, height-200, 50, yMin, yMax)  // Correct!
+   493→   // NOT: p.map(p.mouseY, 50, height-200, yMin, yMax)     // Wrong - reflects on x-axis!
+   494→   ```
+   495→
+   496→2. **WEBGL Limitations** ⚠️
+   497→   - `p.hint()` not available in WEBGL mode
+   498→   - Can't easily draw 2D overlays on 3D canvas
+   499→   - **Solution**: Skip visual legend in 3D, use text description instead
+   500→   ```typescript
+   501→   // Don't do this in WEBGL:
+   502→   p.hint(p.DISABLE_DEPTH_TEST)  // Error: hint is not a function
+   503→
+   504→   // Instead: conditional rendering
+   505→   if (data.dimension === 2) {
+   506→     drawColorLegend(p)  // Works fine in 2D mode
+   507→   } else {
+   508→     // Show text description in UI controls
+   509→   }
+   510→   ```
+   511→
+   512→3. **3D Click Input Challenges**
+   513→   - Can't reliably map 2D click → 3D position
+   514→   - **Solution**: Input fields with bounds validation
+   515→   ```typescript
+   516→   // Check if coordinates are within bounds
+   517→   if (x < xMin || x > xMax || y < yMin || y > yMax || z < zMin || z > zMax) {
+   518→     alert(`Coordinates out of bounds! Use:\nx ∈ [${xMin}, ${xMax}]...`)
+   519→   }
+   520→   ```
+   521→
+   522→4. **Optional Chaining for Bounds Safety**
+   523→   - Bounds may not be loaded when component first renders
+   524→   - **Fix**: Use optional chaining and fallbacks
+   525→   ```typescript
+   526→   {bounds.min[stateIdx]?.toFixed(1) || '?'}  // Safe
+   527→   // NOT: bounds.min[stateIdx].toFixed(1)     // Can crash!
+   528→   ```
+   529→
+   530→5. **Simulation Time as User Control**
+   531→   - Hardcoded time (20s) not flexible for all systems
+   532→   - **Solution**: Slider with sensible limits (5-60s)
+   533→   - Chaotic systems need longer time to show full dynamics
+   534→   - Damped systems converge quickly, shorter time sufficient
+   535→
+   536→**Navigation Flow:**
+   537→```
+   538→System Simulator → [View Vector Field] → Vector Field (with A matrix)
+   539→                → [View Phase Portrait] → State Space (with trajectories)
+   540→                                        → [View Vector Field] → Vector Field (if system matrix available)
+   541→
+   542→Vector Field → [System Simulator] → System Model page
+   543→            → [Phase Portrait] → State Space page
+   544→```
+   545→
+   546→### Utility Classes (`/src/lib/utils.ts`)
+   547→
+   548→#### ColorUtils
+   549→- **Static color palette generation** - Viridis, Plasma, Inferno, Magma, etc.
+   550→- **Theme configuration loading** - Loads from `/data/color-palettes.json`
+   551→- **Caching** - Static properties cache theme config (bounded size, safe)
+   552→
+   553→#### TypographyUtils
+   554→- **Font size management** - Loads visualization-specific font sizes from theme
+   555→- **Fallback handling** - Returns defaults if theme loading fails
+   556→
+   557→#### DataParser
+   558→- **URL parameter parsing** - Extracts and validates JSON from query strings
+   559→- **Error handling** - Graceful fallbacks for malformed data
+   560→
+   561→#### FileHandler
+   562→- **Drag & drop support** - File upload with validation
+   563→- **JSON parsing** - Client-side JSON validation
+   564→- **Cleanup functions** - Returns cleanup function for event listeners
+   565→
+   566→### Data Flow
+   567→
+   568→1. **Page Load**
+   569→   - Next.js renders page component
+   570→   - Checks URL parameters via `DataParser.parseURLParams()`
+   571→   - Loads demo data if no URL data provided
+   572→
+   573→2. **User Uploads File**
+   574→   - `FileUploadZone` handles drag/drop or click to upload
+   575→   - Validates JSON structure
+   576→   - Calls `onFileUpload` callback with parsed data
+   577→
+   578→3. **Visualization Renders**
+   579→   - React component receives data prop
+   580→   - useEffect loads P5.js dynamically (code splitting)
+   581→   - Loads theme config (fonts, colors)
+   582→   - Creates P5 instance with sketch
+   583→   - P5 renders visualization on canvas
+   584→
+   585→4. **Palette Change**
+   586→   - Separate useEffect watches `colorPalette` prop
+   587→   - Loads new palette data
+   588→   - Updates `paletteRef.current`
+   589→   - Calls `p5Instance.updateDisplay()` to redraw
+   590→
+   591→## JSON Data Formats
+   592→
+   593→### Heat Map Data
+   594→```json
+   595→{
+   596→  "data": [[1, 2, 3], [4, 5, 6], [7, 8, 9]],
+   597→  "labels": {
+   598→    "x": ["A", "B", "C"],
+   599→    "y": ["Row 1", "Row 2", "Row 3"]
+   600→  },
+   601→  "colorScale": "viridis",
+   602→  "title": "Sample Heat Map"
+   603→}
+   604→```
+   605→
+   606→### Color Palette Theme Config
+   607→Located at `/public/data/color-palettes.json`:
+   608→```json
+   609→{
+   610→  "palettes": {
+   611→    "viridis": { "type": "sequential", "colors": 256 },
+   612→    "plasma": { "type": "sequential", "colors": 256 }
+   613→  },
+   614→  "typography": {
+   615→    "heatmap": {
+   616→      "titleSize": 24,
+   617→      "labelSize": 14,
+   618→      "fontSize": 12
+   619→    }
+   620→  }
+   621→}
+   622→```
+   623→
+   624→## Performance Considerations
+   625→
+   626→### Memory Management
+   627→- **P5 Instance Cleanup** - Always call `p5.remove()` in useEffect cleanup
+   628→- **Avoid State in Dependencies** - Don't include state that's modified within the effect
+   629→- **Use Refs for Mutable Data** - `paletteRef` used instead of state to prevent re-renders
+   630→- **Static Visualizations** - Call `p.noLoop()` for non-animated visualizations
+   631→
+   632→### Best Practices
+   633→1. **Load P5 dynamically** - `await import('p5')` for code splitting
+   634→2. **Use local variables** - For data that doesn't need to trigger re-renders
+   635→3. **Cleanup event listeners** - Remove all listeners in useEffect return function
+   636→4. **Monitor dependencies** - Only include values that should trigger re-creation
+   637→
+   638→### Common Pitfalls
+   639→
+   640→#### Pitfall 1: State in Effect Dependencies
+   641→❌ **DON'T**: Include state in dependencies if you modify it in the effect
+   642→```typescript
+   643→useEffect(() => {
+   644→  setFontSize(20) // Modifies state
+   645→}, [fontSize]) // Depends on it = INFINITE LOOP
+   646→```
+   647→
+   648→✅ **DO**: Use local variables or refs
+   649→```typescript
+   650→useEffect(() => {
+   651→  let fontSize = 20
+   652→  // Load async...
+   653→  fontSize = loadedSize
+   654→  // Use in sketch closure
+   655→}, [data]) // Only depends on data
+   656→```
+   657→
+   658→#### Pitfall 2: P5 Reading from State
+   659→❌ **DON'T**: Read state directly in P5 draw loop (causes re-mount on every state change)
+   660→```typescript
+   661→const [currentIndex, setCurrentIndex] = useState(0)
+   662→
+   663→useEffect(() => {
+   664→  const sketch = (p) => {
+   665→    p.draw = () => {
+   666→      const idx = currentIndex // Causes re-mount!
+   667→    }
+   668→  }
+   669→  p5 = new P5(sketch)
+   670→}, [currentIndex]) // P5 recreated every frame!
+   671→```
+   672→
+   673→✅ **DO**: Use refs for values P5 needs to read
+   674→```typescript
+   675→const currentIndexRef = useRef(0)
+   676→const [currentIndex, setCurrentIndex] = useState(0)
+   677→
+   678→useEffect(() => {
+   679→  currentIndexRef.current = currentIndex
+   680→}, [currentIndex])
+   681→
+   682→useEffect(() => {
+   683→  const sketch = (p) => {
+   684→    p.draw = () => {
+   685→      const idx = currentIndexRef.current // No re-mount!
+   686→    }
+   687→  }
+   688→  p5 = new P5(sketch)
+   689→}, [data]) // Only re-create when data changes
+   690→```
+   691→
+   692→#### Pitfall 3: Disabled vs Hidden Buttons
+   693→❌ **DON'T**: Leave buttons visible when they can't function
+   694→```typescript
+   695→<button disabled={!hasData}>Export</button>
+   696→// Button visible but grayed out - confusing UX
+   697→```
+   698→
+   699→✅ **DO**: Conditionally render buttons that require preconditions
+   700→```typescript
+   701→{hasData && <button>Export</button>}
+   702→// Button only appears when it can actually work
+   703→```
+   704→
+   705→Exception: Use `disabled` for buttons that should always be visible but temporarily inactive (e.g., "Next" button at end of list).
+   706→
+   707→## Development Workflow
+   708→
+   709→### Local Development
+   710→```bash
+   711→npm run dev       # Start dev server on localhost:3000
+   712→npm run build     # Build for production
+   713→npm run lint      # Run ESLint
+   714→```
+   715→
+   716→### Static Export
+   717→```bash
+   718→npm run build     # Creates /out directory
+   719→npm run export    # Alias for build (configured in next.config.js)
+   720→```
+   721→
+   722→### Deployment
+   723→- **GitHub Pages** - Push to `gh-pages` branch or use GitHub Actions
+   724→- **Static hosting** - All files in `/out` can be served from any static host
+   725→- **Base path** - Configure `basePath` in `next.config.js` for subdirectory hosting
+   726→
+   727→## Browser Compatibility
+   728→- **Modern browsers** - Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
+   729→- **ES modules** - Native ESM support required
+   730→- **Canvas/WebGL** - P5.js requires canvas API
+   731→- **Async/await** - Modern JavaScript features throughout
+   732→
+   733→## Known Issues & Solutions
+   734→
+   735→### Issue: Memory Leak in P5 Components
+   736→**Symptom**: Browser memory grows to 10s of GB
+   737→**Cause**: Infinite useEffect loop creating P5 instances
+   738→**Solution**: Remove state variables from dependencies if modified within effect
+   739→
+   740→### Issue: Font Sizes Not Loading
+   741→**Symptom**: Default font sizes used instead of theme values
+   742→**Cause**: Async loading completes after P5 instance created
+   743→**Solution**: Load theme config before creating sketch, use local variables
+   744→
+   745→### Issue: Palette Not Updating
+   746→**Symptom**: Changing palette doesn't update visualization
+   747→**Cause**: P5 sketch doesn't re-run on palette change
+   748→**Solution**: Separate useEffect watches palette, calls `p5Instance.updateDisplay()`
+   749→
+   750→## Recent Additions (December 2025)
+   751→
+   752→### System Model Simulator
+   753→- Force-directed graph layout based on A matrix structure
+   754→- Draggable nodes with visual feedback
+   755→- Interactive node info panels showing connectivity and flow metrics
+   756→- Bidirectional edge detection with parallel pipe rendering
+   757→- Export to CSV, JSON, and clipboard
+   758→- One-click navigation to State Space Visualizer
+   759→
+   760→### State Space Visualizer
+   761→- Phase portrait grid showing all state pairs
+   762→- Interactive state selection (minimum 2 states)
+   763→- Adjustable trajectory trail length
+   764→- Dual format support (simple JSON + System Simulator exports)
+   765→- SessionStorage integration for seamless navigation
+   766→- Real-time playback with timeline scrubbing
+   767→
+   768→### Integration Pattern
+   769→```
+   770→System Simulator → "View Phase Portrait" → State Space Visualizer
+   771→                    ↓ sessionStorage ↓
+   772→              Automatic data transfer, zero friction
+   773→```
+   774→
+   775→## Future Enhancements
+   776→- [ ] Vector field visualization (see planning section below)
+   777→- [ ] PNG/SVG export for visualizations
+   778→- [ ] Real-time data streaming via WebSocket
+   779→- [ ] Collaborative features with shareable URLs
+   780→- [ ] 3D phase portraits with WebGL
+   781→- [ ] Accessibility improvements (ARIA labels, keyboard navigation)
+   782→- [ ] WebAssembly for intensive computations
+   783→- [ ] Bifurcation diagrams for parameter studies
+   784→
+   785→## Contributing
+   786→When modifying P5.js components:
+   787→1. Always test memory usage in browser DevTools
+   788→2. Ensure useEffect dependencies are correct
+   789→3. Call `p.remove()` in cleanup function
+   790→4. Use refs for data that shouldn't trigger re-renders
+   791→5. Document async loading patterns
+   792→
+   793→## Resources
+   794→- [Next.js Documentation](https://nextjs.org/docs)
+   795→- [P5.js Reference](https://p5js.org/reference/)
+   796→- [React Hooks](https://react.dev/reference/react)
+   797→- [Tailwind CSS](https://tailwindcss.com/docs)
+   798→
+   799→---
+   800→
+   801→## PLANNING: Vector Field Visualizer
+   802→
+   803→### Design Decisions Required
+   804→
+   805→**Instructions**: Fill in your requirements below. Once complete, notify Claude to review this section and implement.
+   806→
+   807→#### 1. System Definition & Input
+   808→**Question**: What type of systems should it support?
+   809→- [ ] Linear only: `dx/dt = Ax` (2×2 or 3×3 matrix)?
+   810→- [ ] Linear with input: `dx/dt = Ax + Bu`?
+   811→- [ ] Nonlinear: `dx/dt = f(x)` with custom functions?
+   812→
+   813→**Your Answer**:
+   814→Requirements: 
+   815→- the visualiser shall accept only linear systems of any dimension. However, Claude should keep in mind that future changes might consider extending this to non-linear systems. 
+   816→
+   817→**Question**: How should users input the system?
+   818→- [ ] Manual matrix entry (text fields)?
+   819→- [ ] JSON upload (from System Simulator)?
+   820→- [ ] Predefined examples?
+   821→- [ ] Connection to System Simulator (import A matrix directly)?
+   822→
+   823→**Your Answer**:
+   824→Requirements: 
+   825→1. The visualiser shall accept user input in the following manner:
+   826→   1. JSON upload via a standardised JSON format analogous to the phase-portrait visualiser. 
+   827→   2. Via taking the data output from the system simulator, analogous to the phase-portrait visualiser. 
+   828→   3. The system shall contain a predefined example, the same default system as the system simulator (mass spring damper). 
+   829→2. Future changes may warrant direct matrix design, but this is not the priority. 
+   830→---
+   831→
+   832→#### 2. Dimensionality & Projection
+   833→**Question**: Which dimensions to visualize?
+   834→- [ ] 2D only (x1 vs x2)?
+   835→- [ ] 3D vector fields?
+   836→- [ ] For higher-dimensional systems (n>2), select which 2 states to plot?
+   837→
+   838→**Your Answer**:
+   839→Requirements:
+   840→
+   841→1. General capabilities:
+   842→   1. The user shall have the capability to switch the axes on which the states sit. 
+   843→      1. In the context of a 2D vector field, this means inversion, or a flipping of the axes.
+   844→      2. In the context of a 3D vector field, this means rotating the selected states. 
+   845→   2. The user shall have the capability to open a number of windows. For example, the user can have two windows of 2D fields next to one another OR one windows of 3D and one windows of 2D field next to one another OR two windows of 3D visualisations next to one another. 
+   846→   3. The user shall have the capability to place a 'ball' in the vector field, and simulate the system over a defined time period. 
+   847→      1. The user shall have the capability to view the ball progress through the simulation on all the different visualisation windows. 
+   848→
+   849→
+   850→2. For systems that contain up to two states:
+   851→   1. The user shall have the capability to view ONLY a 2D visualisations of vector fields. 
+   852→   2. Systems of a single state shall return an error explaining that the minimum number of states is two. 
+   853→   3. For systems that only contain two states, the 3D visualisation shall NOT be visible, and should return an error to the user. 
+   854→
+   855→3. For systems that contain three or more states:
+   856→   1. The user shall have the capability to view either 2D or 3D vector fields. 
+   857→   2. The user shall be able to select which states to view in each visualisation window, with a maximum of three states viewable for any given window. 
+   858→
+   859→
+   860→**Question**: For 3+ state systems, how to handle other states?
+   861→- [ ] Fix them at zero?
+   862→- [ ] Fix at equilibrium values?
+   863→- [ ] User-specified slice through state space?
+   864→
+   865→**Your Answer**:
+   866→Requirements:
+   867→1. The user shall have the option to toggle between:
+   868→   1. Fix all other states at zero. 
+   869→   2. Fix all other states at equilibrium values. 
+   870→   3. Fix all other states at other predefined values, given by the user. 
+   871→   4. Default to fixing all other states at zero. 
+   872→2. Claude shall consider best practice UI & UX design when considering how to implement this. 
+   873→
+   874→---
+   875→
+   876→#### 3. Vector Field Representation
+   877→**Question**: How to display the field?
+   878→- [ ] Arrow grid (classic)?
+   879→- [ ] Streamlines/flow lines?
+   880→- [ ] Both options (user toggle)?
+   881→- [ ] Color coding by magnitude?
+   882→
+   883→**Your Answer**:
+   884→Requirements:
+   885→1. The user shall have the option to switch between:
+   886→   1. Arrow grid
+   887→   2. Streamlines
+   888→2. The colour coding shall be done by magnitude. 
+   889→
+   890→**Question**: Arrow scaling?
+   891→- [ ] Normalized (all same length, shows direction only)?
+   892→- [ ] Proportional to magnitude (shows speed)?
+   893→- [ ] Log-scaled for large dynamic ranges?
+   894→
+   895→**Your Answer**:
+   896→Requirements:
+   897→1. The visualiser shall only utilise normalized arrows. 
+   898→2. The visualiser shall show magnitude through colour. 
+   899→3. The visualiser shall user a log-scale only under circumstances where they are warranted. 
+   900→
+   901→---
+   902→
+   903→#### 4. Grid & Bounds
+   904→**Question**: State space range?
+   905→- [ ] Fixed (e.g., -10 to 10)?
+   906→- [ ] User-adjustable?
+   907→- [ ] Auto-calculated from eigenvalues/system characteristics?
+   908→
+   909→**Your Answer**:
+   910→Requirements:
+   911→1. The visualiser shall:
+   912→   1. Autocalculate the grid and bounds based on eigenvalue characteristics. 
+   913→   2. Based on the autocalculated values, the user shall have the capability to adjust these values. 
+   914→
+   915→**Question**: Grid density?
+   916→- [ ] Fixed grid (e.g., 20×20)?
+   917→- [ ] User-adjustable slider?
+   918→- [ ] Adaptive (denser near interesting features)?
+   919→
+   920→**Your Answer**:
+   921→Requirements:
+   922→1. The grid shall be fixed and consistent, based on the state space range.
+   923→2. The user may change the grid bounds.
+   924→   1. In the case the user decides to alter the grid bounds, a button shall appear, giving the user the option to recalculate the grid. 
+   925→
+   926→---
+   927→
+   928→#### 5. Trajectory Integration
+   929→**Question**: Should users be able to plot solution trajectories?
+   930→- [ ] Click to add initial condition → show trajectory?
+   931→- [ ] Multiple trajectories simultaneously?
+   932→- [ ] Forward time, backward time, or both?
+   933→- [ ] Integration method (Euler, RK4)?
+   934→
+   935→**Your Answer**:
+   936→Requirements:
+   937→1. The visualiser shall have the capability to plot a solution trajectory. 
+   938→   1. The visualiser shall allow a maximum two simultaneous trajectories to be plotted. 
+   939→   2. The visualiser shall only calculate forward time trajectories. 
+   940→   3. The visualiser shall store data on forward time trajectories, and the user shall have the capability to go backwards through the calculated trajectory. 
+   941→      1. The user shall go backwards through the calculated trajectory using a scrubber. 
+   942→2. The integration method used shall be the most computationally efficient. 
+   943→
+   944→**Question**: Trajectory visualization?
+   945→- [ ] Animated point moving along path?
+   946→- [ ] Full path drawn?
+   947→- [ ] Fading trail?
+   948→
+   949→**Your Answer**:
+   950→Requirements:
+   951→1. The trajectory visualisation shall contain:
+   952→   1. An animated point moving along a path. 
+   953→2. The user shall have the option to select between a fading trail and the full path up to the point calculated. 
+   954→
+   955→---
+   956→
+   957→#### 6. Analysis Features
+   958→**Question**: What analytical tools to include?
+   959→- [ ] Equilibrium points (where dx/dt = 0)?
+   960→- [ ] Nullclines (isoclines where one state doesn't change)?
+   961→- [ ] Eigenvectors of A matrix?
+   962→- [ ] Stability classification (saddle, stable node, unstable spiral, etc.)?
+   963→- [ ] Lyapunov function contours?
+   964→
+   965→**Your Answer**:
+   966→Requirements:
+   967→1. The visualiser shall contain toggles for the following analysis features:
+   968→   1. Equilibrium points
+   969→   2. Nullclines and isoclines. 
+   970→   3. Stability classifiers. 
+   971→   4. Lyapunov function contours. 
+   972→
+   973→---
+   974→
+   975→#### 7. Interactivity
+   976→**Question**: What interactions should be supported?
+   977→- [ ] Click to add trajectories?
+   978→- [ ] Drag matrix sliders to see real-time changes?
+   979→- [ ] Zoom/pan the view?
+   980→- [ ] Toggle nullclines/eigenvectors on/off?
+   981→
+   982→**Your Answer**:
+   983→Requirements:
+   984→1. The user shall have the ability to:
+   985→   1. Click to add a trajectory. 
+   986→   2. Pan and zoom. 
+   987→   3. Toggle the analysis features off individually. 
+   988→
+   989→---
+   990→
+   991→#### 8. Integration with Existing Pages
+   992→**Question**: How should it connect to other tools?
+   993→- [ ] "View Vector Field" button in System Simulator (like Phase Portrait)?
+   994→- [ ] Only for 2-state systems?
+   995→- [ ] Extract 2D subsystems from higher-dimensional systems?
+   996→
+   997→**Your Answer**:
+   998→Requirements:
+   999→1. There shall be a button in the system simulator page that links to the vector field page. 
+  1000→2. There shall be a button in the phase portrait page that links to the vector field page. 
+  1001→3. There shall be two buttons in the vector field page that link to both the system simulator page and the phase portrait page. 
+  1002→
+  1003→---
+  1004→
+  1005→#### 9. Predefined Examples
+  1006→**Question**: What examples to include?
+  1007→
+  1008→**Your Answer**:
+  1009→Requirements:
+  1010→1. The predefined example to include shall be a mass-spring-damper system for a 2D vector field. 
+  1011→2. The predefined example to include shall be a lorenz attrctor for a 3D vector field. 
+  1012→
+  1013→---
+  1014→
+  1015→#### 10. Performance & Rendering
+  1016→**Question**: Technology choice?
+  1017→- [ ] P5.js (consistent with other visualizations)?
+  1018→- [ ] Canvas API directly (better performance)?
+  1019→- [ ] WebGL for 3D?
+  1020→
+  1021→**Your Answer**:
+  1022→Claude shall decide what the best technologies are to implement this page. 
+  1023→Claude should factor in extensibility when considering the technologies to use. 
+  1024→
+  1025→---
+  1026→
+  1027→### Summary of Requirements
+  1028→Once you've filled in the sections above, provide a brief summary here:
+  1029→
+  1030→**Must-have features for v1**:
+  1031→1. 2D/3D switch, switching from mass spring damper to lorenz attractor. 
+  1032→2. extensible technology choice.
+  1033→
+  1034→**Nice-to-have features for later**:
+  1035→All the rest shall be implemented step by step. 
+  1036→
+  1037→**Special considerations**:
+  1038→
+  1039→
+  1040→---
+  1041→**STATUS**: ⏳ Awaiting user input. Notify Claude when ready to implement.
+  1042→
+  1043→---
+  1044→---
+  1045→
+  1046→## PLANNING: Agent-Based Modeling (ABM) Simulator
+  1047→
+  1048→**Vision Statement:**
+  1049→Create a general-purpose agent-based modeling platform that can simulate diverse systems (social, transport, ecological, etc.) from JSON configuration files. Support both visualized and non-visualized (fast) execution modes. Use a flexible framework based on: Environment + Agents + Interaction Rules.
+  1050→
+  1051→The ABM simulator is strictly 2D. 
+  1052→
+  1053→Thinking:
+  1054→1. Should use ODD protocol: [examples](https://jasss.soc.surrey.ac.uk/23/2/7/S2-ODD.pdf)
+  1055→
+  1056→
+  1057→---
+  1058→
+  1059→### 1. Framework Architecture & Design Philosophy
+  1060→
+  1061→**Question**: How should we structure the ABM framework to maximize generality while remaining practical?
+  1062→
+  1063→**Considerations**:
+  1064→- Object-oriented approach (Agent class, Environment class, Simulation class)?
+  1065→- Entity-Component-System (ECS) pattern for maximum flexibility?
+  1066→- behaviour composition (agents have pluggable behaviors)?
+  1067→- Event-driven vs tick-based simulation loop?
+  1068→- How to balance ease of use vs extensibility?
+  1069→
+  1070→**Your Answer**:
+  1071→Requirements:
+  1072→1. The framework shall utilize the Entity-Component-System (ECS) pattern.
+  1073→   1. **Entities** are unique identifiers with no intrinsic data or behaviour.
+  1074→   2. **Components** are pure data containers, serializable to/from JSON.
+  1075→   3. **Systems** are stateless processors that operate on entities possessing specific component combinations.
+  1076→
+  1077→2. The framework shall implement a three-layer architecture:
+  1078→   1. **Layer 1 - JSON Model Definition**: Declarative specification of entities, components, behaviours, and rules following the ODD protocol.
+  1079→   2. **Layer 2 - Primitives Library**: Domain-agnostic operations (spatial queries, vector math, state transitions, aggregations) that behaviours compose from.
+  1080→   3. **Layer 3 - Interpreter Systems**: Execute composed behaviours by evaluating primitive operations against entity data.
+  1081→
+  1082→3. Behaviours shall emerge from **primitive composition**, not custom code.
+  1083→   1. The framework shall provide primitives in these categories:
+  1084→      - **Spatial**: `withinRadius`, `nearestN`, `inRegion`, `distance`
+  1085→      - **Aggregation**: `average`, `sum`, `count`, `min`, `max`
+  1086→      - **Steering**: `seek`, `flee`, `arrive`, `wander`, `separation`, `alignment`, `cohesion`
+  1087→      - **Filters**: component presence, property comparisons, logical combinators
+  1088→      - **State**: `transition`, `timer`, `counter`, `set`, `increment`
+  1089→      - **Math**: `lerp`, `clamp`, `noise`, `sampleDistribution`, `arithmetic`
+  1090→   2. New behaviours shall be created by composing existing primitives in JSON, not by writing code.
+  1091→
+  1092→---
+  1093→
+  1094→### 2. Agent Definition & Properties
+  1095→
+  1096→**Question**: What properties and capabilities should agents have? How are they specified in JSON?
+  1097→
+  1098→**Considerations**:
+  1099→- Core properties: position, state, type, unique ID?
+  1100→- Custom properties per agent type (e.g., "hunger" for predator, "speed" for vehicle)?
+  1101→- Agent behaviours: movement, sensing, decision-making, communication?
+  1102→- Agent lifecycle: birth, death, reproduction?
+  1103→- Memory/history: do agents remember past states or interactions?
+  1104→- Heterogeneous agents: can different agent types coexist in one simulation?
+  1105→
+  1106→**Your Answer**:
+  1107→Requirements:
+  1108→1. Agent definitions shall follow the ODD protocol's "Entities, State Variables, and Scales" section.
+  1109→
+  1110→2. The JSON shall define **component types** (schemas for data containers):
+  1111→   1. Each component type shall declare its properties and their data types.
+  1112→   2. Supported data types: `number`, `string`, `boolean`, `enum`, `vector2D`, `entityRef`, `entityRefArray`.
+  1113→
+  1114→3. The JSON shall define **archetypes** (templates for entity creation):
+  1115→   1. An archetype specifies which components an entity has and their default values.
+  1116→   2. Archetypes may inherit from other archetypes.
+  1117→
+  1118→4. Entity instantiation shall support:
+  1119→   1. Explicit individual entities with specific property values.
+  1120→   2. Bulk spawning with count, spatial distribution, and statistical variation on properties.
+  1121→
+  1122→5. Agent lifecycle events shall be declaratively specified:
+  1123→   1. Creation conditions (spawning rules).
+  1124→   2. Destruction conditions (death/removal criteria).
+  1125→   3. Lifecycle events shall be defined as rules with conditions and effects.
+  1126→
+  1127→6. All agents shall automatically have:
+  1128→   1. A unique ID (auto-generated).
+  1129→   2. A `Position` component if spatial simulation is enabled.
+  1130→
+  1131→---
+  1132→
+  1133→### 3. Environment Representation
+  1134→
+  1135→**Question**: How should the environment be structured? What types of spatial models should we support?
+  1136→
+  1137→**Considerations**:
+  1138→- Continuous 2D/3D space (x, y, z coordinates)?
+  1139→- Discrete grid (cellular automata style)?
+  1140→- Network/graph topology (nodes and edges)?
+  1141→- Toroidal boundaries (wrap-around) vs hard boundaries?
+  1142→- Environmental properties: resources, terrain, obstacles, zones?
+  1143→- Multi-layer environments (e.g., ground + air layers)?
+  1144→- Environment dynamics: does the environment change over time?
+  1145→
+  1146→**Your Answer**:
+  1147→Requirements:
+  1148→1. The JSON shall define spatial structure under an `environment` or `scales.spatial` key.
+  1149→
+  1150→2. Supported spatial types:
+  1151→   1. `continuous2D`: Continuous x, y coordinates within bounds.
+  1152→   2. `grid2D`: Discrete cells with integer coordinates.
+  1153→   3. `network`: Graph topology with nodes and edges (agents occupy nodes or traverse edges).
+  1154→
+  1155→3. Boundary conditions:
+  1156→   1. `toroidal` (default): Agents wrap around edges.
+  1157→   2. `bounded`: Agents cannot exit; collision or reflection at edges.
+  1158→   3. `infinite`: No boundaries (use with caution for performance).
+  1159→
+  1160→4. The environment shall support **spatial indexing** for efficient neighbour queries:
+  1161→   1. For `continuous2D`: Quadtree or spatial hash grid (implementation detail, not user-facing).
+  1162→   2. For `grid2D`: Direct cell lookup.
+  1163→   3. For `network`: Adjacency list traversal.
+  1164→
+  1165→5. The environment may define **static features**:
+  1166→   1. Obstacles (regions agents cannot enter).
+  1167→   2. Zones (named regions that affect behaviour or are queryable).
+  1168→   3. Resource fields (scalar values at positions, e.g., food density).
+  1169→
+  1170→6. Environment dynamics:
+  1171→   1. Static features may have update rules (e.g., resource regeneration).
+  1172→   2. Environment rules follow the same primitive composition as agent behaviours.
+  1173→
+  1174→---
+  1175→
+  1176→### 4. Interaction Rules & Behaviours
+  1177→
+  1178→**Question**: How do agents interact with each other and the environment? How are these rules specified?
+  1179→
+  1180→**Considerations**:
+  1181→- Sensing radius: how far can agents "see"?
+  1182→- Interaction types: collision, communication, resource transfer, reproduction?
+  1183→- Rule specification: hard-coded behaviours vs user-defined rules?
+  1184→- Probabilistic vs deterministic interactions?
+  1185→- Local vs global interactions (neighborhood vs broadcast)?
+  1186→- Force-based interactions (attraction/repulsion like flocking)?
+  1187→- Conditional behaviours: if-then rules, state machines, decision trees?
+  1188→- Scripting language for custom behaviours (e.g., JavaScript expressions in JSON)?
+  1189→
+  1190→**Your Answer**:
+  1191→Requirements:
+  1192→1. No scripting or executable code shall be permitted in JSON. All logic shall be expressed as **structured rule definitions**.
+  1193→
+  1194→2. Rules shall follow a **condition → effect** structure:
+  1195→```
+  1196→   {
+  1197→     "name": "ruleName",
+  1198→     "trigger": { ... },      // when to evaluate
+  1199→     "condition": { ... },    // predicate tree (must be true to fire)
+  1200→     "effect": { ... }        // what happens
+  1201→   }
+  1202→```
+  1203→
+  1204→3. **Conditions** shall be expressed as predicate trees, not strings:
+  1205→   1. Comparison operators: `eq`, `neq`, `gt`, `gte`, `lt`, `lte`
+  1206→   2. Logical operators: `and`, `or`, `not`
+  1207→   3. Property access: `{ "prop": "self.ComponentName.property" }`
+  1208→   4. Literal values: numbers, strings, booleans directly
+  1209→   
+  1210→   Example:
+  1211→```json
+  1212→   {
+  1213→     "and": [
+  1214→       { "gt": [{ "prop": "self.Energy.value" }, 50] },
+  1215→       { "eq": [{ "prop": "self.State.status" }, "hungry"] }
+  1216→     ]
+  1217→   }
+  1218→```
+  1219→
+  1220→4. **Effects** shall be expressed as operation trees:
+  1221→   1. `set`: Assign a value to a property.
+  1222→   2. `increment` / `decrement`: Modify numeric properties.
+  1223→   3. `transition`: Change a state machine state.
+  1224→   4. `spawn`: Create a new entity.
+  1225→   5. `destroy`: Remove an entity.
+  1226→   6. `emit`: Emit an event for logging/observation.
+  1227→
+  1228→5. **Triggers** define when rules are evaluated:
+  1229→   1. `everyTick`: Evaluate each timestep.
+  1230→   2. `onProximity`: Evaluate when entities are within range.
+  1231→   3. `onStateChange`: Evaluate when a specific property changes.
+  1232→   4. `onEvent`: Evaluate when a named event is emitted.
+  1233→
+  1234→6. **Probabilistic effects** shall be supported:
+  1235→```json
+  1236→   {
+  1237→     "probability": { "mul": [0.03, { "prop": "source.Contagion.infectivity" }] },
+  1238→     "effect": { "set": { "target": "self.Health.status", "value": "infected" } }
+  1239→   }
+  1240→```
+  1241→
+  1242→7. **Steering behaviors** shall be composable in JSON:
+  1243→```json
+  1244→   {
+  1245→     "SteeringBehavior": {
+  1246→       "rules": [
+  1247→         { "type": "separation", "query": { "radius": 25 }, "weight": 1.5 },
+  1248→         { "type": "cohesion", "query": { "radius": 50, "filter": { "hasComponent": "Flockmate" } }, "weight": 1.0 },
+  1249→         { "type": "flee", "query": { "radius": 100, "filter": { "hasComponent": "Predator" } }, "weight": 3.0 }
+  1250→       ]
+  1251→     }
+  1252→   }
+  1253→```
+  1254→
+  1255→---
+  1256→
+  1257→### 5. JSON Data Format & Schema
+  1258→
+  1259→**Question**: What should the JSON structure look like? How do we make it intuitive yet powerful?
+  1260→
+  1261→**Considerations**:
+  1262→- Top-level keys: simulation metadata, environment config, agent definitions, rules?
+  1263→- Agent initialization: list of individual agents vs population specifications?
+  1264→- Rule definitions: array of rule objects with conditions and actions?
+  1265→- Parameter sweeps: support for multiple runs with varying parameters?
+  1266→- Validation: JSON schema for type checking?
+  1267→- Example ABM types to support initially:
+  1268→  - Predator-prey (Lotka-Volterra)
+  1269→  - Traffic/transportation
+  1270→  - Epidemic spread (SIR model)
+  1271→  - Social networks
+  1272→  - Flocking/swarming
+  1273→  - Cellular automata (Conway's Game of Life)
+  1274→
+  1275→**Your Answer**:
+  1276→Requirements:
+  1277→1. The JSON structure shall align with the ODD protocol:
+  1278→```
+  1279→   {
+  1280→     "overview": { ... },
+  1281→     "designConcepts": { ... },
+  1282→     "details": { ... }
+  1283→   }
+  1284→```
+  1285→
+  1286→2. **Overview** section shall contain:
+  1287→   1. `purpose`: String describing the model's purpose.
+  1288→   2. `entities`: Component type definitions and archetypes.
+  1289→   3. `stateVariables`: Alias for component properties (for ODD compliance).
+  1290→   4. `scales`: Spatial and temporal configuration.
+  1291→   5. `processSchedule`: Ordered list of systems to execute each tick.
+  1292→
+  1293→3. **Design Concepts** section shall contain:
+  1294→   1. `sensing`: What information agents can perceive about others.
+  1295→   2. `interaction`: Rules governing agent-agent and agent-environment interactions.
+  1296→   3. `stochasticity`: Random seed and which processes use randomness.
+  1297→   4. `observation`: What data to collect for output/visualization.
+  1298→
+  1299→4. **Details** section shall contain:
+  1300→   1. `initialization`: Entity spawning rules, initial conditions, optional external data files.
+  1301→   2. `submodels`: Named behavior modules composed from primitives.
+  1302→   3. `interventions`: Conditional modifications triggered during simulation (optional).
+  1303→
+  1304→5. The framework shall validate JSON against a published JSON Schema before execution.
+  1305→   1. Validation errors shall be reported with line numbers and clear messages.
+  1306→   2. The schema shall be versioned (e.g., `"schemaVersion": "1.0"`).
+  1307→
+  1308→6. The JSON format shall be **LLM-friendly**:
+  1309→   1. Consistent key naming (camelCase).
+  1310→   2. No ambiguous overloading of keys.
+  1311→   3. Explicit type indicators where needed.
+  1312→   4. Reasonable defaults for optional fields.
+  1313→
+  1314→
+  1315→---
+  1316→
+  1317→### 6. Simulation Engine & Execution
+  1318→
+  1319→**Question**: How should the simulation loop work? What scheduling and update mechanisms?
+  1320→
+  1321→**Considerations**:
+  1322→- Timestep size: fixed dt vs variable (event-driven)?
+  1323→- Update order: synchronous (all agents update at once) vs asynchronous (sequential)?
+  1324→- Random vs deterministic ordering of agent updates?
+  1325→- Scheduling: should certain agents/events happen at specific times?
+  1326→- Termination conditions: fixed duration, equilibrium detection, custom criteria?
+  1327→- Pause/resume/reset capabilities?
+  1328→- Performance targets: how many agents should we support (100? 1000? 10000+)?
+  1329→
+  1330→**Your Answer**:
+  1331→Requirements:
+  1332→1. Timestep is a fixed dt determined in the json. 
+  1333→2. Update order is asynchronous. 
+  1334→3. Termination condition is a fixed duration of time, determined in the json file, and is an input field in the page. 
+  1335→4. Buttons on the page shall include:
+  1336→   1. Pause/resume/reset capabilities. 
+  1337→5. Performance targets:
+  1338→   1. The simulation shall support up to 100 agents. 
+  1339→6. **Process scheduling** shall be explicitly defined in JSON:
+  1340→   1. Systems execute in the order listed in `processSchedule`.
+  1341→   2. Each system entry may specify:
+  1342→      - `order`: `"parallel"` (all entities update simultaneously) or `"sequential"` (one at a time).
+  1343→      - `shuffle`: If sequential, whether to randomize entity order each tick.
+  1344→   
+  1345→   Example:
+  1346→```json
+  1347→   {
+  1348→     "processSchedule": [
+  1349→       { "system": "Sensing", "order": "parallel" },
+  1350→       { "system": "Decision", "order": "sequential", "shuffle": true },
+  1351→       { "system": "Movement", "order": "parallel" },
+  1352→       { "system": "Interaction", "order": "sequential", "shuffle": true }
+  1353→     ]
+  1354→   }
+  1355→```
+  1356→
+  1357→7. **Stochasticity** shall be reproducible:
+  1358→   1. A `seed` value in JSON determines all random number generation.
+  1359→   2. If no seed is provided, a random seed is generated and reported.
+  1360→   3. The UI shall display the current seed and allow the user to input a specific seed.
+  1361→---
+  1362→
+  1363→### 7. Visualization Options
+  1364→
+  1365→**Question**: What should be visualized and how? What rendering technologies should we use?
+  1366→
+  1367→**Considerations**:
+  1368→- ~~Rendering library: P5.js (consistency with other visualizations), raw Canvas 2D, WebGL (for 10,000+ agents)?~~
+  1369→- ~~Visual representation of agents: circles/dots, sprites/images, custom shapes?~~
+  1370→- ~~Color coding: by agent type, state, property value?~~
+  1371→- Environment visualization: background, resource density heatmaps, obstacles?
+  1372→- Trails: show agent movement history?
+  1373→- Real-time graphs: population over time, resource levels, statistics?
+  1374→- ~~2D vs 3D visualization (is 3D necessary for any ABM types)?~~
+  1375→- ~~Zoom and pan controls?~~
+  1376→- ~~Agent labels/tooltips on hover?~~
+  1377→
+  1378→**Your Answer**:
+  1379→Requirements:
+  1380→1. There shall be only a 2D visualisation of the model. 
+  1381→2. There shall be no pan/zoom controls. 
+  1382→3. The user shall be able to see current individual agent states when clicking on an agent.
+  1383→4. The visual representation of agents shall be as coloured circles by default. 
+  1384→   1. The user shall have the capability to define groups of agents, and for each group the json shall have the capability to define what shape is used per group. 
+  1385→      1. The system shall accept icons from icon libraries to represent agents, referenced via a link to the icon. 
+  1386→   2. If the json requests multiple groups and no shape is assigned for that group, then a random shape is assigned. 
+  1387→   3. A legend shall display the groups, if there is more than one group. 
+  1388→5. The agent-based model simulator is strictly 2D. 
+  1389→   1. The simulator makes use of WebGL in order to optimise the simulation. 
+  1390→6. There shall be no zoom or pan controls. The window shall show the full simulation. 
+  1391→7. Colouring shall be defined as follows:
+  1392→   1. By default, colouring shall be defined by the agent type. 
+  1393→   2. The inputted json shall be able to define if the colouring should be determined by a particular agent state. The agent states shall contain a maximum and minimum range, as defined in the ODD. Therefore, the user shall be able to define two colours, representing the maximum and minimum range of the state. 
+  1394→8. The environment
+  1395→9. Real-time graphs
+  1396→   1. The user shall be able to view two timeseries plots in two vertical windows below the simulation. 
+  1397→   2. The first timeseries plot shall focus on the large-scale simulation, and should have tickboxes which determine which states to visualise. 
+  1398→   3. The second timeseries plot shall focus on the individual agents. 
+  1399→      1. The second plot shall have two dropdowns
+  1400→         1. The first dropdown shall define which agent GROUP the user wishes to view the states for. 
+  1401→         2. The second dropdown shall define which INDIVIDUAL agent the user wishes to view the states for. 
+  1402→10. **Graph update frequency**: Time series plots shall update every N ticks (configurable, default 1).
+  1403→
+  1404→11. **Color interpolation**: When coloring by state value, interpolation shall be linear in RGB space by default.
+  1405→
+  1406→12. **Click-to-inspect**: When a user clicks an agent, a panel shall display:
+  1407→    1. Entity ID
+  1408→    2. Archetype name
+  1409→    3. All component data as key-value pairs
+  1410→    4. Option to "track" this agent (highlight it persistently)
+  1411→
+  1412→
+  1413→---
+  1414→
+  1415→### 8. Non-Visualized Performance Mode
+  1416→
+  1417→**Question**: How should the "fast mode" work? What optimizations are needed?
+  1418→
+  1419→**Considerations**:
+  1420→- Skip all rendering, run simulation logic only?
+  1421→- Use Web Workers to avoid blocking UI?
+  1422→- Batch processing: run N timesteps then update progress?
+  1423→- Output options: final state only vs periodic snapshots vs full timeseries?
+  1424→- Speed comparison target: how much faster should it be (10x? 100x?)?
+  1425→- Progress reporting: how to show user that simulation is running?
+  1426→- Memory management for long simulations?
+  1427→
+  1428→**Your Answer**:
+  1429→For now do not implement this, but consider that this may be a feature added later on when architecting the software. 
+  1430→
+  1431→Requirements:
+  1432→1. 
+  1433→
+  1434→---
+  1435→
+  1436→### 9. Data Output & Analytics
+  1437→
+  1438→**Question**: What data should be collected and exported? What analysis tools should be built-in?
+  1439→
+  1440→**Considerations**:
+  1441→- Timeseries data: agent positions, states, population counts?
+  1442→- Aggregate statistics: mean, variance, spatial density?
+  1443→- Export formats: JSON (full state), CSV (timeseries), images/video (visualization)?
+  1444→- Real-time plotting: population dynamics, phase portraits, histograms?
+  1445→- Metrics specific to ABM type (e.g., clustering coefficient for social networks)?
+  1446→- Integration with existing visualizers (state space, time series, network graphs)?
+  1447→
+  1448→**Your Answer**:
+  1449→Requirements:
+  1450→1. The JSON shall define an `observation` section specifying what data to collect:
+  1451→```json
+  1452→   {
+  1453→     "observation": {
+  1454→       "timeseries": [
+  1455→         { "name": "susceptible", "query": { "count": { "filter": { "eq": ["Health.status", "S"] } } } },
+  1456→         { "name": "avgSpeed", "query": { "average": { "property": "Velocity.magnitude" } } }
+  1457→       ],
+  1458→       "snapshots": {
+  1459→         "every": 10,
+  1460→         "include": ["Position", "Health"]
+  1461→       },
+  1462→       "events": ["infection", "death", "birth"]
+  1463→     }
+  1464→   }
+  1465→```
+  1466→
+  1467→2. Export formats:
+  1468→   1. **JSON**: Full simulation state or timeseries.
+  1469→   2. **CSV**: Timeseries data with columns per observed metric.
+  1470→
+  1471→3. Event logging:
+  1472→   1. Rules may emit named events via the `emit` effect.
+  1473→   2. Events are logged with tick number, involved entity IDs, and event data.
+  1474→   3. Event logs can be exported separately.
+  1475→
+  1476→---
+  1477→
+  1478→### 10. Integration with Existing Platform
+  1479→
+  1480→**Question**: How does ABM fit into the current visualization platform?
+  1481→
+  1482→**Considerations**:
+  1483→- Page structure: similar to `/vectorfield` and `/systemmodel`?
+  1484→- File upload zone for JSON configuration?
+  1485→- Demo simulations with pre-loaded examples?
+  1486→- Navigation: how to link from other pages (if at all)?
+  1487→- Homepage listing: should it be in "System Models" or "Visualizations"?
+  1488→- Data flow: can ABM results be exported to other visualizers?
+  1489→
+  1490→**Your Answer**:
+  1491→Requirements:
+  1492→1. The page structure shall be similar to `/vectorfield` and `/systemmodel`.
+  1493→2. There shall be a file upload zone for the JSON configuration.
+  1494→3. There shall be a preloaded example, namely Schellings segregation model, Conways game of life, and the predator prey system.
+  1495→4. The homepage listing shall be under system models.
+  1496→5. ABM results can be exported to other visualisers.
+  1497→6. Page layout (top to bottom):
+  1498→   1. Demo selector and file upload zone
+  1499→   2. Simulation canvas (full width)
+  1500→   3. Model Info section (below simulation, showing purpose, agent count, dt)
+  1501→   4. Two timeseries graphs (aggregate population dynamics and individual agent metrics)
+  1502→   5. Instructions panel
+  1503→   6. Expected JSON Format section with example code block (like other visualization pages) 
+  1504→
+  1505→---
+  1506→
+  1507→### 11. Extensibility & Plugin System
+  1508→
+  1509→**Question**: How can users add custom behaviours without modifying core code?
+  1510→
+  1511→**Considerations**:
+  1512→- Plugin architecture: allow users to define custom agent classes?
+  1513→- behaviour composition: mix-and-match predefined behaviors?
+  1514→- ~~Custom rules in JSON: support JavaScript expressions (eval) or safe subset?~~
+  1515→- Template library: common behaviours (seek, flee, wander, flock)?
+  1516→- Version compatibility: how to handle breaking changes?
+  1517→
+  1518→**Your Answer**:
+  1519→Requirements:
+  1520→1. No custom code or scripts shall be permitted in JSON (security requirement).
+  1521→
+  1522→2. Extensibility shall be achieved through **primitive composition**:
+  1523→   1. Users create novel behaviors by combining existing primitives in JSON.
+  1524→   2. The primitives library shall be comprehensive enough that most ABM behaviors are expressible.
+  1525→
+  1526→3. **Archetype inheritance** allows building complex agent types from simpler ones:
+  1527→```json
+  1528→   {
+  1529→     "archetypes": {
+  1530→       "BaseAgent": { "Position": {}, "Velocity": {} },
+  1531→       "Prey": { "extends": "BaseAgent", "Health": { "value": 100 }, "FleesBehavior": { ... } },
+  1532→       "SmartPrey": { "extends": "Prey", "Memory": { "capacity": 5 } }
+  1533→     }
+  1534→   }
+  1535→```
+  1536→
+  1537→4. **Submodel modularity**: Named behavior modules can be defined once and referenced:
+  1538→```json
+  1539→   {
+  1540→     "submodels": {
+  1541→       "standardFlocking": {
+  1542→         "type": "SteeringBehavior",
+  1543→         "rules": [ ... ]
+  1544→       }
+  1545→     },
+  1546→     "archetypes": {
+  1547→       "Bird": {
+  1548→         "Position": {},
+  1549→         "Velocity": {},
+  1550→         "SteeringBehavior": { "ref": "standardFlocking" }
+  1551→       }
+  1552→     }
+  1553→   }
+  1554→```
+  1555→
+  1556→5. Future consideration: A curated **behavior library** of pre-built submodels (flocking, SIR, pursuit-evasion) that users can import by name.
+  1557→
+  1558→---
+  1559→
+  1560→### 12. Demo Examples & Use Cases
+  1561→
+  1562→**Question**: What example simulations should we include to demonstrate capabilities?
+  1563→
+  1564→**Considerations**:
+  1565→- Starter examples (must include):
+  1566→  - Flocking/Boids (already have `/flocking` page - integrate or separate?)
+  1567→  - Predator-prey dynamics
+  1568→  - Epidemic spread (SIR/SEIR model)
+  1569→  - Traffic simulation
+  1570→  - Conway's Game of Life
+  1571→- Domain coverage: ensure examples span social, ecological, physical systems
+  1572→- Complexity gradient: simple → intermediate → advanced examples
+  1573→- Educational value: can examples teach ABM concepts?
+  1574→
+  1575→**Your Answer**:
+  1576→Requirements:
+  1577→1. The framework shall ship with these example simulations:
+  1578→   1. **Schelling's Segregation Model** — demonstrates grid-based movement, threshold rules.
+  1579→   2. **Conway's Game of Life** — demonstrates cellular automata, grid environment.
+  1580→   3. **Predator-Prey (Lotka-Volterra)** — demonstrates heterogeneous agents, reproduction, death.
+  1581→   4. **Flocking (Boids)** — demonstrates steering behaviors, continuous space.
+  1582→   5. **SIR Epidemic** — demonstrates state machines, probabilistic transmission.
+  1583→
+  1584→2. Examples shall be selectable from a dropdown in the UI.
+  1585→
+  1586→3. Each example shall include:
+  1587→   1. The JSON configuration.
+  1588→   2. A brief description displayed to the user.
+  1589→   3. Suggested parameters to experiment with.
+  1590→
+  1591→---
+  1592→
+  1593→### 13. Performance & Scalability
+  1594→
+  1595→**Question**: What performance optimizations are critical? What are acceptable limits?
+  1596→
+  1597→**Considerations**:
+  1598→- Spatial indexing: quadtree/grid for efficient neighbor searches?
+  1599→- Level of detail: render fewer agents when zoomed out?
+  1600→- Agent pooling: reuse objects instead of creating/destroying?
+  1601→- Culling: only update/render agents in viewport?
+  1602→- WebGL instancing for rendering thousands of similar agents?
+  1603→- Progressive enhancement: graceful degradation for low-end devices?
+  1604→- Benchmarking: what metrics to track (FPS, agents/sec, memory)?
+  1605→
+  1606→**Your Answer**:
+  1607→Requirements:
+  1608→1. The simulation shall support up to 100 agents at 60 FPS (as stated in Q6).
+  1609→
+  1610→2. **Spatial indexing** shall be implemented for neighbor queries:
+  1611→   1. For continuous space: spatial hash grid or quadtree.
+  1612→   2. Neighbor queries shall be O(k) where k is the number of neighbors, not O(n) where n is total agents.
+  1613→
+  1614→3. **Rendering optimization**:
+  1615→   1. Use WebGL instanced rendering for drawing agents.
+  1616→   2. Batch draw calls by visual type (shape + color).
+  1617→
+  1618→4. **Future consideration**: For non-visualized mode, Web Workers shall be used to avoid blocking the UI thread.
+  1619→
+  1620→---
+  1621→
+  1622→### 14. User Interface & Controls
+  1623→
+  1624→**Question**: What controls should users have during simulation? What parameters should be adjustable in real-time?
+  1625→
+  1626→**Considerations**:
+  1627→- Playback: play, pause, step forward, reset?
+  1628→- Speed control: 0.1x to 10x simulation speed?
+  1629→- Live parameter adjustment: change agent behaviours while running?
+  1630→- Add/remove agents manually (click to add, click to remove)?
+  1631→- Visualization toggles: show/hide trails, labels, grid, zones?
+  1632→- Camera controls: pan, zoom, rotate (if 3D)?
+  1633→- Inspector: click agent to see detailed state?
+  1634→
+  1635→**Your Answer**:
+  1636→Requirements:
+  1637→1. **Playback controls**:
+  1638→   1. Play / Pause button.
+  1639→   2. Step forward (advance one tick while paused).
+  1640→   3. Reset (return to initial state).
+  1641→
+  1642→2. **Speed control**:
+  1643→   1. Slider or dropdown for simulation speed: 0.5x, 1x, 2x. 
+  1644→   2. Speed affects ticks per second, not timestep size.
+  1645→
+  1646→3. **Parameter adjustment**:
+  1647→   1. Key simulation parameters (as defined in JSON under a `uiParameters` section) shall be editable in the UI.
+  1648→   2. Changes take effect immediately (next tick).
+  1649→   3. Example:
+  1650→```json
+  1651→     {
+  1652→       "uiParameters": [
+  1653→         { "name": "Transmission Rate", "path": "diseaseParams.transmissionProb", "min": 0, "max": 1, "step": 0.01 }
+  1654→       ]
+  1655→     }
+  1656→```
+  1657→
+  1658→4. **Visualization toggles**:
+  1659→   1. Show/hide trails.
+  1660→   2. Show/hide grid (if grid environment).
+  1661→   3. Show/hide zones.
+  1662→
+  1663→5. **Inspector panel**: Click an agent to see its state (covered in Q7).
+  1664→
+  1665→---
+  1666→
+  1667→### 15. Technology Stack Decision
+  1668→
+  1669→**Question**: What rendering and computation technologies should we use?
+  1670→
+  1671→**Considerations**:
+  1672→- Visualization: P5.js vs raw Canvas 2D vs WebGL?
+  1673→  - P5.js: consistent with existing visualizations, easier to use
+  1674→  - Canvas 2D: lighter weight, more control
+  1675→  - WebGL: maximum performance for 10,000+ agents
+  1676→- Web Workers: for non-visualized mode?
+  1677→- WebAssembly: for compute-intensive simulations (physics, pathfinding)?
+  1678→- State management: React state vs separate simulation controller?
+  1679→- Type safety: TypeScript interfaces for all ABM components?
+  1680→
+  1681→**Your Answer**:
+  1682→
+  1683→Requirements:
+  1684→
+  1685→1. **Rendering**: PIXI.js (WebGL-based 2D renderer).
+  1686→   1. Use `ParticleContainer` for efficient batch rendering of agents.
+  1687→   2. Automatic fallback to Canvas 2D via PIXI's built-in detection.
+  1688→   3. Target: 100 agents at 60 FPS (with headroom to 1000+).
+  1689→
+  1690→2. **Framework**: Integrate with existing platform (React, TypeScript).
+  1691→   1. PIXI application shall be encapsulated in a React component.
+  1692→   2. PIXI canvas lifecycle (create, resize, destroy) shall be managed via React `useEffect`.
+  1693→
+  1694→3. **Simulation logic**: Pure TypeScript, decoupled from rendering.
+  1695→   1. Simulation state shall be serializable (for save/load, export).
+  1696→   2. The ECS world shall be updated independently of the PIXI render loop.
+  1697→   3. The renderer shall only read from the ECS world, never mutate it.
+  1698→
+  1699→4. **JSON validation**: Use Ajv for JSON Schema validation.
+  1700→
+  1701→5. **Expression evaluation**: Custom safe evaluator for predicate/operation trees (no `eval`, no `Function`).
+  1702→
+  1703→6. **State management**: 
+  1704→   1. Simulation state managed by a controller class.
+  1705→   2. React UI subscribes to state updates via callbacks or a lightweight event emitter.
+  1706→   3. PIXI renderer subscribes to entity positions/visuals for rendering.
+  1707→
+  1708→---
+  1709→
+  1710→### Summary of Requirements
+  1711→
+  1712→Once you've filled in the sections above, provide a brief summary here:
+  1713→
+  1714→**Must-have features for v1**:
+  1715→1.
+  1716→2.
+  1717→3.
+  1718→
+  1719→**Nice-to-have features for later**:
+  1720→-
+  1721→-
+  1722→
+  1723→**Special considerations**:
+  1724→1. In creating this, consider that a LLM will be generating the json files. 
+  1725→2. I want you to create a separate markdown file that describes how an LLM should generate the json. 
+  1726→3. Define the system prompt for the LLM, and the user prompt. The user prompt will contain summarised text from a newspaper article, defined {{ $json.newsTextBody }}. 
+  1727→
+  1728→---
+  1729→**STATUS**: ⏳ Awaiting user input. Notify Claude when ready to implement.
+  1730→
+
+<system-reminder>
+Whenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.
+</system-reminder>

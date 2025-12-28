@@ -1,0 +1,187 @@
+     1→'use client'
+     2→
+     3→import Link from 'next/link'
+     4→import { useState } from 'react'
+     5→
+     6→export default function Home() {
+     7→  const [theme, setTheme] = useState<'light' | 'dark'>('light')
+     8→
+     9→  const toggleTheme = () => {
+    10→    const newTheme = theme === 'light' ? 'dark' : 'light'
+    11→    setTheme(newTheme)
+    12→    document.documentElement.setAttribute('data-theme', newTheme)
+    13→  }
+    14→
+    15→  const visualizations = [
+    16→    {
+    17→      title: 'Heat Maps',
+    18→      description: 'Visualize 2D data matrices with color-coded intensity',
+    19→      href: '/heatmap',
+    20→      demoHref: '/heatmap?demo=true'
+    21→    },
+    22→    {
+    23→      title: 'Scatter Plots', 
+    24→      description: 'Plot relationships between two variables',
+    25→      href: '/scatter',
+    26→      demoHref: '/scatter?demo=true'
+    27→    },
+    28→    {
+    29→      title: 'Geospatial Data',
+    30→      description: 'Map-based visualizations with geographic data',
+    31→      href: '/geospatial',
+    32→      demoHref: '/geospatial?demo=true'
+    33→    },
+    34→    {
+    35→      title: 'Time Series',
+    36→      description: 'Visualize data changes over time',
+    37→      href: '/timeseries',
+    38→      demoHref: '/timeseries?demo=true'
+    39→    },
+    40→    {
+    41→      title: 'Network Graphs',
+    42→      description: 'Visualize connections and relationships',
+    43→      href: '/network',
+    44→      demoHref: '/network?demo=true'
+    45→    },
+    46→    {
+    47→      title: 'Bar Charts',
+    48→      description: 'Compare categorical data with bars',
+    49→      href: '/barchart',
+    50→      demoHref: '/barchart?demo=true'
+    51→    }
+    52→  ]
+    53→
+    54→  const models = [
+    55→    {
+    56→      title: 'Particle System',
+    57→      description: 'Physics-based particle simulation with collision detection and interactive controls',
+    58→      href: '/particles',
+    59→      demoHref: '/particles?demo=true'
+    60→    },
+    61→    {
+    62→      title: 'Flocking Behavior',
+    63→      description: 'Emergent group behavior from simple rules (separation, alignment, cohesion)',
+    64→      href: '/flocking',
+    65→      demoHref: '/flocking?demo=true'
+    66→    }
+    67→  ]
+    68→
+    69→  return (
+    70→    <div className="min-h-screen">
+    71→      <header className="relative overflow-hidden">
+    72→        <div className="absolute inset-0 bg-gradient-to-br from-primary to-secondary"></div>
+    73→        <div className="relative z-10 text-white py-16 px-4 text-center">
+    74→          <h1 className="text-4xl md:text-6xl font-light mb-4">
+    75→            Data Visualization Platform
+    76→          </h1>
+    77→          <p className="text-xl md:text-2xl opacity-90 mb-6">
+    78→            Interactive P5.js visualizations for your data
+    79→          </p>
+    80→          <button
+    81→            onClick={toggleTheme}
+    82→            className="btn bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/30"
+    83→          >
+    84→            {theme === 'light' ? '🌙 Dark Mode' : '☀️ Light Mode'}
+    85→          </button>
+    86→        </div>
+    87→      </header>
+    88→
+    89→      <main className="max-w-6xl mx-auto px-4 py-16">
+    90→        <section className="mb-16">
+    91→          <h2 className="text-3xl font-semibold text-text mb-8">
+    92→            Visualization Types
+    93→          </h2>
+    94→          <div className="gallery-grid">
+    95→            {visualizations.map((viz) => (
+    96→              <div key={viz.title} className="card">
+    97→                <h3>{viz.title}</h3>
+    98→                <p>{viz.description}</p>
+    99→                <div className="flex gap-2">
+   100→                  <Link href={viz.href} className="btn">
+   101→                    Open
+   102→                  </Link>
+   103→                  <Link href={viz.demoHref} className="btn demo">
+   104→                    Demo
+   105→                  </Link>
+   106→                </div>
+   107→              </div>
+   108→            ))}
+   109→          </div>
+   110→        </section>
+   111→
+   112→        <section className="mb-16">
+   113→          <h2 className="text-3xl font-semibold text-text mb-8">
+   114→            System Models
+   115→          </h2>
+   116→          <div className="grid md:grid-cols-2 gap-6">
+   117→            {models.map((model) => (
+   118→              <div key={model.title} className="card">
+   119→                <h3>{model.title}</h3>
+   120→                <p>{model.description}</p>
+   121→                <div className="flex gap-2">
+   122→                  <Link href={model.href} className="btn">
+   123→                    Open
+   124→                  </Link>
+   125→                  <Link href={model.demoHref} className="btn demo">
+   126→                    Demo
+   127→                  </Link>
+   128→                </div>
+   129→              </div>
+   130→            ))}
+   131→          </div>
+   132→        </section>
+   133→
+   134→        <section>
+   135→          <h2 className="text-3xl font-semibold text-text mb-8">
+   136→            How to Use
+   137→          </h2>
+   138→          <div className="grid md:grid-cols-3 gap-6">
+   139→            <div className="card">
+   140→              <h3 className="text-lg font-medium mb-3">URL Parameters</h3>
+   141→              <p className="text-sm mb-3">Send JSON data via URL query parameters:</p>
+   142→              <code className="block bg-gray-100 p-3 rounded text-sm break-all">
+   143→                /heatmap?data={JSON.stringify({"values":[[1,2],[3,4]]})}
+   144→              </code>
+   145→            </div>
+   146→            
+   147→            <div className="card">
+   148→              <h3 className="text-lg font-medium mb-3">File Upload</h3>
+   149→              <p className="text-sm">
+   150→                Drag and drop JSON files onto any visualization page for instant rendering.
+   151→              </p>
+   152→            </div>
+   153→            
+   154→            <div className="card">
+   155→              <h3 className="text-lg font-medium mb-3">PostMessage API</h3>
+   156→              <p className="text-sm mb-3">For iframe integration, send data via postMessage:</p>
+   157→              <code className="block bg-gray-100 p-3 rounded text-xs">
+   158→                iframe.contentWindow.postMessage(&#123;type: 'updateData', data: &#123;...&#125;&#125;, '*')
+   159→              </code>
+   160→            </div>
+   161→          </div>
+   162→        </section>
+   163→      </main>
+   164→
+   165→      <footer className="bg-text text-white py-8 mt-16">
+   166→        <div className="max-w-6xl mx-auto px-4 text-center">
+   167→          <p>&copy; 2024 Data Visualization Platform - Built with Next.js and P5.js</p>
+   168→          <div className="mt-4 text-sm opacity-80">
+   169→            <a href="https://github.com" className="hover:underline mr-4">
+   170→              GitHub
+   171→            </a>
+   172→            <a href="https://p5js.org" className="hover:underline mr-4">
+   173→              P5.js Documentation
+   174→            </a>
+   175→            <a href="https://nextjs.org" className="hover:underline">
+   176→              Next.js
+   177→            </a>
+   178→          </div>
+   179→        </div>
+   180→      </footer>
+   181→    </div>
+   182→  )
+   183→}
+
+<system-reminder>
+Whenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.
+</system-reminder>

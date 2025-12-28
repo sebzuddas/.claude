@@ -1,0 +1,4 @@
+563:        <div className="w-full max-w-4xl bg-white rounded-lg shadow-lg p-4 mt-4">
+578:      <div className="w-full max-w-4xl mt-8 grid grid-cols-1 gap-4">
+719:      <div className="w-full max-w-4xl bg-white rounded-lg shadow-lg p-4 mt-4">
+732:      <div className="w-full max-w-4xl mt-8">

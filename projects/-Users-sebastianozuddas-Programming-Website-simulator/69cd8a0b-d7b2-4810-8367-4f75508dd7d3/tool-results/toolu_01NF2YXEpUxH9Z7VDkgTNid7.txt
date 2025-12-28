@@ -1,0 +1,11 @@
+262-              "inputs": ["Force"],
+263-              "outputs": ["Position"]
+264-            },
+265-            "dt": 0.1,
+266-            "timeHorizon": 10,
+267:            "title": "Example System"
+268-          }}
+269-        />
+270-
+271-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+272-          <h4 className="font-semibold mb-2">Key Features:</h4>

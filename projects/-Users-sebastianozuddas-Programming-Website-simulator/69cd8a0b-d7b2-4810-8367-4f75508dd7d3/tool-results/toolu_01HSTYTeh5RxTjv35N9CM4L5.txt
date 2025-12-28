@@ -1,0 +1,31 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/lib/abm/core/evaluator.ts has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   572→    typeof (value as Vector2D).y === 'number'
+   573→  )
+   574→}
+   575→
+   576→function deepEqual(a: unknown, b: unknown): boolean {
+   577→  if (a === b) return true
+   578→
+   579→  if (typeof a !== typeof b) return false
+   580→
+   581→  if (typeof a !== 'object' || a === null || b === null) {
+   582→    return a === b
+   583→  }
+   584→
+   585→  if (Array.isArray(a) && Array.isArray(b)) {
+   586→    if (a.length !== b.length) return false
+   587→    return a.every((item, i) => deepEqual(item, b[i]))
+   588→  }
+   589→
+   590→  if (Array.isArray(a) !== Array.isArray(b)) return false
+   591→
+   592→  const aObj = a as Record<string, unknown>
+   593→  const bObj = b as Record<string, unknown>
+   594→  const aKeys = Object.keys(aObj)
+   595→  const bKeys = Object.keys(bObj)
+   596→
+   597→  if (aKeys.length !== bKeys.length) return false
+   598→
+   599→  return aKeys.every(key => deepEqual(aObj[key], bObj[key]))
+   600→}
+   601→

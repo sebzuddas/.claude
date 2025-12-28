@@ -1,0 +1,183 @@
+'use client'
+
+import Link from 'next/link'
+import { useState } from 'react'
+
+export default function Home() {
+  const [theme, setTheme] = useState<'light' | 'dark'>('light')
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'light' ? 'dark' : 'light'
+    setTheme(newTheme)
+    document.documentElement.setAttribute('data-theme', newTheme)
+  }
+
+  const visualizations = [
+    {
+      title: 'Heat Maps',
+      description: 'Visualize 2D data matrices with color-coded intensity',
+      href: '/heatmap',
+      demoHref: '/heatmap?demo=true'
+    },
+    {
+      title: 'Scatter Plots', 
+      description: 'Plot relationships between two variables',
+      href: '/scatter',
+      demoHref: '/scatter?demo=true'
+    },
+    {
+      title: 'Geospatial Data',
+      description: 'Map-based visualizations with geographic data',
+      href: '/geospatial',
+      demoHref: '/geospatial?demo=true'
+    },
+    {
+      title: 'Time Series',
+      description: 'Visualize data changes over time',
+      href: '/timeseries',
+      demoHref: '/timeseries?demo=true'
+    },
+    {
+      title: 'Network Graphs',
+      description: 'Visualize connections and relationships',
+      href: '/network',
+      demoHref: '/network?demo=true'
+    },
+    {
+      title: 'Bar Charts',
+      description: 'Compare categorical data with bars',
+      href: '/barchart',
+      demoHref: '/barchart?demo=true'
+    }
+  ]
+
+  const models = [
+    {
+      title: 'Particle System',
+      description: 'Physics-based particle simulation with collision detection and interactive controls',
+      href: '/particles',
+      demoHref: '/particles?demo=true'
+    },
+    {
+      title: 'Flocking Behavior',
+      description: 'Simulate emergent group behavior patterns',
+      href: '/models/flocking',
+      demoHref: '/models/flocking?demo=true'
+    }
+  ]
+
+  return (
+    <div className="min-h-screen">
+      <header className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary to-secondary"></div>
+        <div className="relative z-10 text-white py-16 px-4 text-center">
+          <h1 className="text-4xl md:text-6xl font-light mb-4">
+            Data Visualization Platform
+          </h1>
+          <p className="text-xl md:text-2xl opacity-90 mb-6">
+            Interactive P5.js visualizations for your data
+          </p>
+          <button
+            onClick={toggleTheme}
+            className="btn bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/30"
+          >
+            {theme === 'light' ? '🌙 Dark Mode' : '☀️ Light Mode'}
+          </button>
+        </div>
+      </header>
+
+      <main className="max-w-6xl mx-auto px-4 py-16">
+        <section className="mb-16">
+          <h2 className="text-3xl font-semibold text-text mb-8">
+            Visualization Types
+          </h2>
+          <div className="gallery-grid">
+            {visualizations.map((viz) => (
+              <div key={viz.title} className="card">
+                <h3>{viz.title}</h3>
+                <p>{viz.description}</p>
+                <div className="flex gap-2">
+                  <Link href={viz.href} className="btn">
+                    Open
+                  </Link>
+                  <Link href={viz.demoHref} className="btn demo">
+                    Demo
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="mb-16">
+          <h2 className="text-3xl font-semibold text-text mb-8">
+            System Models
+          </h2>
+          <div className="grid md:grid-cols-2 gap-6">
+            {models.map((model) => (
+              <div key={model.title} className="card">
+                <h3>{model.title}</h3>
+                <p>{model.description}</p>
+                <div className="flex gap-2">
+                  <Link href={model.href} className="btn">
+                    Open
+                  </Link>
+                  <Link href={model.demoHref} className="btn demo">
+                    Demo
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section>
+          <h2 className="text-3xl font-semibold text-text mb-8">
+            How to Use
+          </h2>
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="card">
+              <h3 className="text-lg font-medium mb-3">URL Parameters</h3>
+              <p className="text-sm mb-3">Send JSON data via URL query parameters:</p>
+              <code className="block bg-gray-100 p-3 rounded text-sm break-all">
+                /heatmap?data={JSON.stringify({"values":[[1,2],[3,4]]})}
+              </code>
+            </div>
+            
+            <div className="card">
+              <h3 className="text-lg font-medium mb-3">File Upload</h3>
+              <p className="text-sm">
+                Drag and drop JSON files onto any visualization page for instant rendering.
+              </p>
+            </div>
+            
+            <div className="card">
+              <h3 className="text-lg font-medium mb-3">PostMessage API</h3>
+              <p className="text-sm mb-3">For iframe integration, send data via postMessage:</p>
+              <code className="block bg-gray-100 p-3 rounded text-xs">
+                iframe.contentWindow.postMessage(&#123;type: 'updateData', data: &#123;...&#125;&#125;, '*')
+              </code>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer className="bg-text text-white py-8 mt-16">
+        <div className="max-w-6xl mx-auto px-4 text-center">
+          <p>&copy; 2024 Data Visualization Platform - Built with Next.js and P5.js</p>
+          <div className="mt-4 text-sm opacity-80">
+            <a href="https://github.com" className="hover:underline mr-4">
+              GitHub
+            </a>
+            <a href="https://p5js.org" className="hover:underline mr-4">
+              P5.js Documentation
+            </a>
+            <a href="https://nextjs.org" className="hover:underline">
+              Next.js
+            </a>
+          </div>
+        </div>
+      </footer>
+    </div>
+  )
+}

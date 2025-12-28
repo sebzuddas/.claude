@@ -1,0 +1,141 @@
+/**
+ * Flocking (Boids) Demo Model
+ *
+ * Classic flocking behavior with separation, alignment, and cohesion.
+ */
+
+import type { ABMModelDefinition } from '@/lib/abm'
+
+export const FLOCKING_MODEL: ABMModelDefinition = {
+  schemaVersion: '1.0',
+
+  overview: {
+    purpose: 'Flocking behavior simulation demonstrating emergent collective motion from simple rules',
+
+    entities: {
+      componentTypes: [
+        {
+          name: 'Position',
+          properties: {
+            x: { type: 'number', default: 0 },
+            y: { type: 'number', default: 0 }
+          }
+        },
+        {
+          name: 'Velocity',
+          properties: {
+            x: { type: 'number', default: 0 },
+            y: { type: 'number', default: 0 }
+          }
+        },
+        {
+          name: 'SteeringBehavior',
+          properties: {
+            rules: { type: 'string', default: '[]' },
+            maxSpeed: { type: 'number', default: 100 },
+            maxForce: { type: 'number', default: 5 }
+          }
+        }
+      ],
+
+      archetypes: [
+        {
+          name: 'Boid',
+          components: {
+            Position: { x: 0, y: 0 },
+            Velocity: { x: 0, y: 0 },
+            SteeringBehavior: {
+              rules: [
+                { type: 'separation', weight: 1.5, query: { radius: 25 } },
+                { type: 'alignment', weight: 1.0, query: { radius: 50 } },
+                { type: 'cohesion', weight: 1.0, query: { radius: 50 } }
+              ],
+              maxSpeed: 100,
+              maxForce: 5
+            }
+          },
+          visual: {
+            shape: 'triangle',
+            size: 6,
+            color: '#4285f4'
+          }
+        }
+      ]
+    },
+
+    scales: {
+      spatial: {
+        spatial: {
+          type: 'continuous2D',
+          width: 600,
+          height: 400
+        },
+        boundary: 'toroidal'
+      },
+      temporal: {
+        dt: 0.016,
+        maxTicks: 10000
+      }
+    },
+
+    processSchedule: [
+      { system: 'Steering', order: 'parallel' },
+      { system: 'Movement', order: 'parallel' }
+    ]
+  },
+
+  designConcepts: {
+    sensing: {
+      description: 'Boids sense neighbors within a radius',
+      defaultRadius: 50
+    },
+
+    interaction: {
+      description: 'Boids apply separation, alignment, and cohesion forces',
+      rules: []
+    },
+
+    stochasticity: {
+      description: 'Initial positions and velocities are randomized'
+    },
+
+    observation: {
+      timeseries: [
+        {
+          name: 'avgSpeed',
+          query: { average: { property: 'Velocity.x' } }
+        }
+      ]
+    }
+  },
+
+  details: {
+    initialization: {
+      entities: [
+        {
+          archetype: 'Boid',
+          count: 50,
+          position: {
+            type: 'random',
+            region: {
+              min: { x: 0, y: 0 },
+              max: { x: 600, y: 400 }
+            }
+          },
+          propertyVariation: {
+            'Velocity.x': {
+              distribution: 'uniform',
+              min: -50,
+              max: 50
+            },
+            'Velocity.y': {
+              distribution: 'uniform',
+              min: -50,
+              max: 50
+            }
+          }
+        }
+      ]
+    }
+  }
+}

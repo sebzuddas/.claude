@@ -1,0 +1,27 @@
+19-  const [currentTimeIndex, setCurrentTimeIndex] = useState(0)
+20-  const currentTimeIndexRef = useRef(0)
+21-  const [isPlaying, setIsPlaying] = useState(false)
+22-  const [showArrows, setShowArrows] = useState(true)
+23-  const [gridDensity] = useState(20)
+24:  const [bounds, setBounds] = useState<{ min: number[], max: number[] } | null>(null)
+25-
+26-  // Initial condition inputs for 3D
+27-  const [ic3DX, setIc3DX] = useState('1.0')
+28-  const [ic3DY, setIc3DY] = useState('1.0')
+29-  const [ic3DZ, setIc3DZ] = useState('1.0')
+--
+36-  // Calculate bounds when data changes
+37-  useEffect(() => {
+38-    if (!data) return
+39-
+40-    if (data.bounds) {
+41:      setBounds(data.bounds)
+42-    } else {
+43-      // Auto-calculate bounds based on system characteristics
+44-      const calculatedBounds = calculateBounds(data)
+45:      setBounds(calculatedBounds)
+46-    }
+47-  }, [data])
+48-
+49-  // Auto-play animation
+50-  useEffect(() => {

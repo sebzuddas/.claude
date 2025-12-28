@@ -1,0 +1,34 @@
+   155→      const visuals = new Map<string, VisualConfig>()
+   156→      for (const archetype of modelDef.overview.entities.archetypes) {
+   157→        visuals.set(archetype.name, archetype.visual || {})
+   158→      }
+   159→      renderer.setArchetypeVisuals(visuals)
+   160→
+   161→      // Subscribe to controller events
+   162→      controller.on('stateChanged', (state: unknown) => {
+   163→        setSimState({ ...(state as SimulationState) })
+   164→      })
+   165→
+   166→      controller.on('tick', () => {
+   167→        setTimeseries(new Map(controller.getTimeseries()))
+   168→      })
+   169→
+   170→      // Initial render
+   171→      renderer.render(controller.getEntities())
+   172→
+   173→      setModel(modelDef)
+   174→      setSimState(controller.getState())
+   175→      setMessage({ text: `Loaded: ${modelDef.overview.purpose}`, type: 'success' })
+   176→
+   177→    } catch (error) {
+   178→      console.error('Failed to initialize simulation:', error)
+   179→      setMessage({
+   180→        text: `Failed to initialize: ${error instanceof Error ? error.message : 'Unknown error'}`,
+   181→        type: 'error'
+   182→      })
+   183→    }
+   184→  }, [showTrails])
+
+<system-reminder>
+Whenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.
+</system-reminder>

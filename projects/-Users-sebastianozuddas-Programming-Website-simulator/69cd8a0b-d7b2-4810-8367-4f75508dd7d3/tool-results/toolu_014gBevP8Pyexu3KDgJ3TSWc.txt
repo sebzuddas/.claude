@@ -1,0 +1,104 @@
+   800→    </VisualizationLayout>
+   801→  )
+   802→}
+   803→
+   804→// =============================================================================
+   805→// TIMESERIES PLOT COMPONENT
+   806→// =============================================================================
+   807→
+   808→interface TimeseriesPlotProps {
+   809→  data: Map<string, TimeseriesData>
+   810→  type: 'aggregate' | 'individual'
+   811→}
+   812→
+   813→function TimeseriesPlot({ data, type }: TimeseriesPlotProps) {
+   814→  const canvasRef = useRef<HTMLCanvasElement>(null)
+   815→
+   816→  useEffect(() => {
+   817→    const canvas = canvasRef.current
+   818→    if (!canvas) return
+   819→
+   820→    const ctx = canvas.getContext('2d')
+   821→    if (!ctx) return
+   822→
+   823→    const rect = canvas.getBoundingClientRect()
+   824→    canvas.width = rect.width * window.devicePixelRatio
+   825→    canvas.height = rect.height * window.devicePixelRatio
+   826→    ctx.scale(window.devicePixelRatio, window.devicePixelRatio)
+   827→
+   828→    const width = rect.width
+   829→    const height = rect.height
+   830→    const padding = 40
+   831→
+   832→    // Clear
+   833→    ctx.fillStyle = '#f9fafb'
+   834→    ctx.fillRect(0, 0, width, height)
+   835→
+   836→    // Filter data based on type
+   837→    // Aggregate: population counts, totals (names containing 'count', 'total', 'population')
+   838→    // Individual: averages, per-agent metrics (names containing 'avg', 'mean', 'individual')
+   839→    const filteredData = new Map<string, TimeseriesData>()
+   840→    const aggregateKeywords = ['count', 'total', 'population', 'susceptible', 'infected', 'recovered', 'prey', 'predator', 'boid']
+   841→    const individualKeywords = ['avg', 'mean', 'average', 'speed', 'energy', 'distance']
+   842→
+   843→    data.forEach((ts, name) => {
+   844→      const nameLower = name.toLowerCase()
+   845→      if (type === 'aggregate') {
+   846→        // Include if matches aggregate keywords OR doesn't match individual keywords
+   847→        const isAggregate = aggregateKeywords.some(kw => nameLower.includes(kw))
+   848→        const isIndividual = individualKeywords.some(kw => nameLower.includes(kw))
+   849→        if (isAggregate || !isIndividual) {
+   850→          filteredData.set(name, ts)
+   851→        }
+   852→      } else {
+   853→        // Individual: include if matches individual keywords
+   854→        const isIndividual = individualKeywords.some(kw => nameLower.includes(kw))
+   855→        if (isIndividual) {
+   856→          filteredData.set(name, ts)
+   857→        }
+   858→      }
+   859→    })
+   860→
+   861→    // If no filtered data for individual, show all data but labeled differently
+   862→    const displayData = filteredData.size > 0 ? filteredData : (type === 'aggregate' ? data : new Map())
+   863→
+   864→    if (displayData.size === 0) {
+   865→      ctx.fillStyle = '#9ca3af'
+   866→      ctx.font = '14px sans-serif'
+   867→      ctx.textAlign = 'center'
+   868→      ctx.fillText(
+   869→        type === 'individual' ? 'No individual-level metrics defined' : 'No data available',
+   870→        width / 2,
+   871→        height / 2
+   872→      )
+   873→      return
+   874→    }
+   875→
+   876→    // Find data range
+   877→    let minVal = Infinity
+   878→    let maxVal = -Infinity
+   879→    let maxTick = 0
+   880→
+   881→    displayData.forEach(ts => {
+   882→      for (const v of ts.values) {
+   883→        minVal = Math.min(minVal, v)
+   884→        maxVal = Math.max(maxVal, v)
+   885→      }
+   886→      maxTick = Math.max(maxTick, ts.ticks.length > 0 ? ts.ticks[ts.ticks.length - 1] : 0)
+   887→    })
+   888→
+   889→    if (minVal === Infinity) return
+   890→
+   891→    // Add padding to range
+   892→    const range = maxVal - minVal || 1
+   893→    minVal -= range * 0.1
+   894→    maxVal += range * 0.1
+   895→
+   896→    // Draw axes
+   897→    ctx.strokeStyle = '#ccc'
+   898→    ctx.lineWidth = 1
+   899→    ctx.beginPath()
+
+<system-reminder>
+Whenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.
+</system-reminder>

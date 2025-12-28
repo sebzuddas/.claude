@@ -1,0 +1,7 @@
+600-        p5.remove()
+601-      }
+602-    }
+603:  }, [data, width, height, bounds, showArrows, gridDensity, trajectories])
+604-
+605-  const handlePlayPause = () => {
+606-    if (trajectories.length === 0) return

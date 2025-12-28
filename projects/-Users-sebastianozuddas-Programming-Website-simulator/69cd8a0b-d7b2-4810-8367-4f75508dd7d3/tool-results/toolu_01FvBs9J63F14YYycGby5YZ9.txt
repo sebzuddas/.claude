@@ -1,0 +1,44 @@
+  1475→
+  1476→---
+  1477→
+  1478→### 10. Integration with Existing Platform
+  1479→
+  1480→**Question**: How does ABM fit into the current visualization platform?
+  1481→
+  1482→**Considerations**:
+  1483→- Page structure: similar to `/vectorfield` and `/systemmodel`?
+  1484→- File upload zone for JSON configuration?
+  1485→- Demo simulations with pre-loaded examples?
+  1486→- Navigation: how to link from other pages (if at all)?
+  1487→- Homepage listing: should it be in "System Models" or "Visualizations"?
+  1488→- Data flow: can ABM results be exported to other visualizers?
+  1489→
+  1490→**Your Answer**:
+  1491→Requirements:
+  1492→1. The page structure shall be similar to `/vectorfield` and `/systemmodel`. 
+  1493→2. There shall be a file upload zone for the JSON configuration. 
+  1494→3. There shall be a preloaded example, namely Schellings segregation model, Conways game of life, and the predator prey system. 
+  1495→4. The homepage listing shall be under system models. 
+  1496→5. ABM results can be exported to other visualisers. 
+  1497→
+  1498→---
+  1499→
+  1500→### 11. Extensibility & Plugin System
+  1501→
+  1502→**Question**: How can users add custom behaviours without modifying core code?
+  1503→
+  1504→**Considerations**:
+  1505→- Plugin architecture: allow users to define custom agent classes?
+  1506→- behaviour composition: mix-and-match predefined behaviors?
+  1507→- ~~Custom rules in JSON: support JavaScript expressions (eval) or safe subset?~~
+  1508→- Template library: common behaviours (seek, flee, wander, flock)?
+  1509→- Version compatibility: how to handle breaking changes?
+  1510→
+  1511→**Your Answer**:
+  1512→Requirements:
+  1513→1. No custom code or scripts shall be permitted in JSON (security requirement).
+  1514→
+
+<system-reminder>
+Whenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.
+</system-reminder>

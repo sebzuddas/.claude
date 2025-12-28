@@ -1,0 +1,99 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/components/visualizations/SystemModel.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   480→              p.fill(60)
+   481→              p.textSize(11)
+   482→              p.textAlign(p.CENTER, p.TOP)
+   483→              p.text(node.value.toFixed(3), node.x, node.y + 35)
+   484→            })
+   485→          }
+   486→
+   487→          function drawNodeInfo(p: any, node: Node, edges: Edge[]) {
+   488→            // Calculate node statistics
+   489→            const incoming = edges.filter(e => e.to.id === node.id)
+   490→            const outgoing = edges.filter(e => e.from.id === node.id)
+   491→
+   492→            const incomingWeight = incoming.reduce((sum, e) => sum + Math.abs(e.weight), 0)
+   493→            const outgoingWeight = outgoing.reduce((sum, e) => sum + Math.abs(e.weight), 0)
+   494→
+   495→            const incomingFlow = incoming.reduce((sum, e) => sum + e.flowRate, 0)
+   496→            const outgoingFlow = outgoing.reduce((sum, e) => sum + e.flowRate, 0)
+   497→
+   498→            // Position panel in top-right corner
+   499→            const panelX = width - 320
+   500→            const panelY = 40
+   501→            const panelWidth = 300
+   502→            const lineHeight = 18
+   503→            const padding = 12
+   504→
+   505→            // Calculate panel height based on content
+   506→            const infoLines = [
+   507→              `Node: ${node.label} (${node.type})`,
+   508→              `Current Value: ${node.value.toFixed(4)}`,
+   509→              ``,
+   510→              `Connectivity:`,
+   511→              `  In-degree: ${incoming.length} connections`,
+   512→              `  Out-degree: ${outgoing.length} connections`,
+   513→              ``,
+   514→              `Static Weights:`,
+   515→              `  Total incoming: ${incomingWeight.toFixed(3)}`,
+   516→              `  Total outgoing: ${outgoingWeight.toFixed(3)}`,
+   517→              ``,
+   518→              `Current Flow (t=${simulationRef.current?.t[currentTimeIndexRef.current].toFixed(2)}s):`,
+   519→              `  Flow in: ${incomingFlow.toFixed(4)}`,
+   520→              `  Flow out: ${outgoingFlow.toFixed(4)}`,
+   521→              `  Net flow: ${(incomingFlow - outgoingFlow).toFixed(4)}`
+   522→            ]
+   523→
+   524→            // Add incoming connections
+   525→            if (incoming.length > 0) {
+   526→              infoLines.push(``)
+   527→              infoLines.push(`Incoming from:`)
+   528→              incoming.forEach(e => {
+   529→                infoLines.push(`  ${e.from.label}: w=${e.weight.toFixed(2)}, flow=${e.flowRate.toFixed(3)}`)
+   530→              })
+   531→            }
+   532→
+   533→            // Add outgoing connections
+   534→            if (outgoing.length > 0) {
+   535→              infoLines.push(``)
+   536→              infoLines.push(`Outgoing to:`)
+   537→              outgoing.forEach(e => {
+   538→                infoLines.push(`  ${e.to.label}: w=${e.weight.toFixed(2)}, flow=${e.flowRate.toFixed(3)}`)
+   539→              })
+   540→            }
+   541→
+   542→            const panelHeight = infoLines.length * lineHeight + padding * 2
+   543→
+   544→            // Draw semi-transparent background
+   545→            p.fill(255, 255, 255, 240)
+   546→            p.stroke(100)
+   547→            p.strokeWeight(2)
+   548→            p.rect(panelX, panelY, panelWidth, panelHeight, 8)
+   549→
+   550→            // Draw info text
+   551→            p.fill(0)
+   552→            p.noStroke()
+   553→            p.textAlign(p.LEFT, p.TOP)
+   554→            p.textSize(12)
+   555→
+   556→            infoLines.forEach((line, i) => {
+   557→              const isBold = line.endsWith(':') && !line.startsWith(' ')
+   558→              if (isBold) {
+   559→                p.textStyle(p.BOLD)
+   560→              } else {
+   561→                p.textStyle(p.NORMAL)
+   562→              }
+   563→
+   564→              p.text(line, panelX + padding, panelY + padding + i * lineHeight)
+   565→            })
+   566→
+   567→            // Draw a line from node to panel
+   568→            p.stroke(100, 100, 100, 150)
+   569→            p.strokeWeight(1)
+   570→            p.line(node.x, node.y, panelX, panelY + panelHeight / 2)
+   571→          }
+   572→
+   573→          // Mouse interaction handlers
+   574→          p.mousePressed = () => {
+   575→            // Check if clicking on a node
+   576→            for (let i = nodes.length - 1; i >= 0; i--) {
+   577→              const node = nodes[i]

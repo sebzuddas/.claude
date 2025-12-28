@@ -1,0 +1,17 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/lib/abm/types.ts has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   408→  entityId?: EntityId
+   409→  data?: Record<string, unknown>
+   410→}
+   411→
+   412→export interface SpatialIndex {
+   413→  type: SpatialType
+   414→  query(position: Vector2D, radius: number): EntityId[]
+   415→  update(entityId: EntityId, position: Vector2D): void
+   416→  remove(entityId: EntityId): void
+   417→  insert(entityId: EntityId, position: Vector2D): void
+   418→  clear(): void
+   419→}
+   420→
+   421→// =============================================================================
+   422→// RENDERER TYPES
+   423→// =============================================================================

@@ -1,0 +1,374 @@
+/**
+ * Predator-Prey Demo Model
+ *
+ * Classic Lotka-Volterra style simulation with reproduction and death.
+ * Demonstrates heterogeneous agents and lifecycle events.
+ */
+
+import type { ABMModelDefinition } from '@/lib/abm'
+
+export const PREDATOR_PREY_MODEL: ABMModelDefinition = {
+  schemaVersion: '1.0',
+
+  overview: {
+    purpose: 'Predator-prey dynamics showing population oscillations and emergent behavior',
+
+    entities: {
+      componentTypes: [
+        {
+          name: 'Position',
+          properties: {
+            x: { type: 'number', default: 0 },
+            y: { type: 'number', default: 0 }
+          }
+        },
+        {
+          name: 'Velocity',
+          properties: {
+            x: { type: 'number', default: 0 },
+            y: { type: 'number', default: 0 }
+          }
+        },
+        {
+          name: 'Energy',
+          properties: {
+            value: { type: 'number', default: 100 },
+            maxValue: { type: 'number', default: 100 }
+          }
+        },
+        {
+          name: 'Species',
+          properties: {
+            type: { type: 'enum', enumValues: ['prey', 'predator'], default: 'prey' }
+          }
+        },
+        {
+          name: 'SteeringBehavior',
+          properties: {
+            rules: { type: 'string', default: '[]' },
+            maxSpeed: { type: 'number', default: 50 },
+            maxForce: { type: 'number', default: 3 }
+          }
+        },
+        {
+          name: 'ReproductionCooldown',
+          properties: {
+            value: { type: 'number', default: 0 }
+          }
+        }
+      ],
+
+      archetypes: [
+        {
+          name: 'Prey',
+          components: {
+            Position: { x: 0, y: 0 },
+            Velocity: { x: 0, y: 0 },
+            Energy: { value: 80, maxValue: 100 },
+            Species: { type: 'prey' },
+            ReproductionCooldown: { value: 0 },
+            SteeringBehavior: {
+              rules: [
+                { type: 'wander', weight: 1.0, params: { wanderRadius: 15, wanderDistance: 30, wanderJitter: 0.5 } },
+                // Use 'other.' prefix to check the neighbor's species, not self
+                { type: 'flee', weight: 3.0, query: { radius: 80, filter: { eq: [{ prop: 'other.Species.type' }, 'predator'] } } },
+                { type: 'separation', weight: 0.5, query: { radius: 20 } }
+              ],
+              maxSpeed: 60,
+              maxForce: 4
+            }
+          },
+          visual: {
+            shape: 'circle',
+            size: 4,
+            color: '#34a853'
+          }
+        },
+        {
+          name: 'Predator',
+          components: {
+            Position: { x: 0, y: 0 },
+            Velocity: { x: 0, y: 0 },
+            Energy: { value: 100, maxValue: 150 },
+            Species: { type: 'predator' },
+            ReproductionCooldown: { value: 0 },
+            SteeringBehavior: {
+              rules: [
+                // Use 'other.' prefix to check the neighbor's species, not self
+                { type: 'seek', weight: 2.0, query: { radius: 150, filter: { eq: [{ prop: 'other.Species.type' }, 'prey'] } } },
+                { type: 'wander', weight: 0.5, params: { wanderRadius: 20, wanderDistance: 40, wanderJitter: 0.3 } },
+                { type: 'separation', weight: 1.0, query: { radius: 30, filter: { eq: [{ prop: 'other.Species.type' }, 'predator'] } } }
+              ],
+              maxSpeed: 50,
+              maxForce: 3
+            }
+          },
+          visual: {
+            shape: 'triangle',
+            size: 7,
+            color: '#ea4335'
+          }
+        }
+      ]
+    },
+
+    scales: {
+      spatial: {
+        spatial: {
+          type: 'continuous2D',
+          width: 600,
+          height: 400
+        },
+        boundary: 'toroidal'
+      },
+      temporal: {
+        dt: 0.05,
+        maxTicks: 10000
+      }
+    },
+
+    processSchedule: [
+      { system: 'Steering', order: 'parallel' },
+      { system: 'Movement', order: 'parallel' },
+      { system: 'Interaction', order: 'sequential', shuffle: true }
+    ]
+  },
+
+  designConcepts: {
+    sensing: {
+      description: 'Predators hunt prey, prey flee from predators',
+      defaultRadius: 100
+    },
+
+    interaction: {
+      description: 'Predators eat prey to gain energy, all agents reproduce when energy is high',
+      rules: [
+        // Energy decay
+        {
+          name: 'energyDecay',
+          trigger: { everyTick: true },
+          effect: {
+            decrement: { target: 'self.Energy.value', amount: 0.1 }
+          }
+        },
+
+        // Prey grazing (energy gain)
+        {
+          name: 'preyGrazing',
+          trigger: { everyTick: true },
+          appliesTo: { eq: [{ prop: 'self.Species.type' }, 'prey'] },
+          effect: {
+            probability: {
+              chance: 0.02,
+              effect: {
+                set: {
+                  target: 'self.Energy.value',
+                  value: {
+                    min: [
+                      { add: [{ prop: 'self.Energy.value' }, 5] },
+                      { prop: 'self.Energy.maxValue' }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+
+        // Predator hunting
+        {
+          name: 'hunting',
+          // Use 'other.' prefix in trigger filter to check neighbor's species, not self
+          trigger: { onProximity: { radius: 15, filter: { eq: [{ prop: 'other.Species.type' }, 'prey'] } } },
+          appliesTo: { eq: [{ prop: 'self.Species.type' }, 'predator'] },
+          condition: { eq: [{ prop: 'other.Species.type' }, 'prey'] },
+          effect: {
+            probability: {
+              chance: 0.3,
+              effect: {
+                sequence: [
+                  { set: {
+                    target: 'self.Energy.value',
+                    value: {
+                      min: [
+                        { add: [{ prop: 'self.Energy.value' }, 40] },
+                        { prop: 'self.Energy.maxValue' }
+                      ]
+                    }
+                  }},
+                  { destroy: { target: 'other' } },
+                  { emit: { event: 'kill', data: { predator: { prop: 'self.id' }, prey: { prop: 'other.id' } } } }
+                ]
+              }
+            }
+          }
+        },
+
+        // Reproduction cooldown
+        {
+          name: 'reproductionCooldown',
+          trigger: { everyTick: true },
+          condition: { gt: [{ prop: 'self.ReproductionCooldown.value' }, 0] },
+          effect: {
+            decrement: { target: 'self.ReproductionCooldown.value', amount: 1 }
+          }
+        },
+
+        // Prey reproduction
+        {
+          name: 'preyReproduction',
+          trigger: { everyTick: true },
+          appliesTo: {
+            and: [
+              { eq: [{ prop: 'self.Species.type' }, 'prey'] },
+              { gte: [{ prop: 'self.Energy.value' }, 70] },
+              { lte: [{ prop: 'self.ReproductionCooldown.value' }, 0] }
+            ]
+          },
+          effect: {
+            probability: {
+              chance: 0.01,
+              effect: {
+                sequence: [
+                  { decrement: { target: 'self.Energy.value', amount: 30 } },
+                  { set: { target: 'self.ReproductionCooldown.value', value: 100 } },
+                  { spawn: {
+                    archetype: 'Prey',
+                    position: { prop: 'self.Position' },
+                    properties: {
+                      'Energy.value': 40
+                    }
+                  }},
+                  { emit: { event: 'birth', data: { parent: { prop: 'self.id' }, species: 'prey' } } }
+                ]
+              }
+            }
+          }
+        },
+
+        // Predator reproduction
+        {
+          name: 'predatorReproduction',
+          trigger: { everyTick: true },
+          appliesTo: {
+            and: [
+              { eq: [{ prop: 'self.Species.type' }, 'predator'] },
+              { gte: [{ prop: 'self.Energy.value' }, 100] },
+              { lte: [{ prop: 'self.ReproductionCooldown.value' }, 0] }
+            ]
+          },
+          effect: {
+            probability: {
+              chance: 0.005,
+              effect: {
+                sequence: [
+                  { decrement: { target: 'self.Energy.value', amount: 50 } },
+                  { set: { target: 'self.ReproductionCooldown.value', value: 200 } },
+                  { spawn: {
+                    archetype: 'Predator',
+                    position: { prop: 'self.Position' },
+                    properties: {
+                      'Energy.value': 50
+                    }
+                  }},
+                  { emit: { event: 'birth', data: { parent: { prop: 'self.id' }, species: 'predator' } } }
+                ]
+              }
+            }
+          }
+        },
+
+        // Death from starvation
+        {
+          name: 'starvation',
+          trigger: { everyTick: true },
+          condition: { lte: [{ prop: 'self.Energy.value' }, 0] },
+          effect: {
+            sequence: [
+              { emit: { event: 'death', data: { agent: { prop: 'self.id' }, cause: 'starvation' } } },
+              { destroy: { target: 'self' } }
+            ]
+          }
+        }
+      ]
+    },
+
+    stochasticity: {
+      description: 'Reproduction and hunting success are probabilistic'
+    },
+
+    observation: {
+      timeseries: [
+        {
+          name: 'prey',
+          query: { count: { filter: { eq: [{ prop: 'Species.type' }, 'prey'] } } }
+        },
+        {
+          name: 'predators',
+          query: { count: { filter: { eq: [{ prop: 'Species.type' }, 'predator'] } } }
+        }
+      ],
+      events: ['birth', 'death', 'kill']
+    }
+  },
+
+  details: {
+    initialization: {
+      entities: [
+        {
+          archetype: 'Prey',
+          count: 80,
+          position: {
+            type: 'random',
+            region: {
+              min: { x: 0, y: 0 },
+              max: { x: 600, y: 400 }
+            }
+          },
+          propertyVariation: {
+            'Velocity.x': { distribution: 'uniform', min: -30, max: 30 },
+            'Velocity.y': { distribution: 'uniform', min: -30, max: 30 },
+            'Energy.value': { distribution: 'uniform', min: 60, max: 100 }
+          }
+        },
+        {
+          archetype: 'Predator',
+          count: 15,
+          position: {
+            type: 'random',
+            region: {
+              min: { x: 0, y: 0 },
+              max: { x: 600, y: 400 }
+            }
+          },
+          propertyVariation: {
+            'Velocity.x': { distribution: 'uniform', min: -20, max: 20 },
+            'Velocity.y': { distribution: 'uniform', min: -20, max: 20 },
+            'Energy.value': { distribution: 'uniform', min: 80, max: 120 }
+          }
+        }
+      ]
+    }
+  },
+
+  uiParameters: [
+    {
+      name: 'Prey Speed',
+      path: 'params.preySpeed',
+      type: 'number',
+      min: 20,
+      max: 100,
+      step: 5,
+      description: 'Maximum speed of prey'
+    },
+    {
+      name: 'Predator Speed',
+      path: 'params.predatorSpeed',
+      type: 'number',
+      min: 20,
+      max: 80,
+      step: 5,
+      description: 'Maximum speed of predators'
+    }
+  ]
+}

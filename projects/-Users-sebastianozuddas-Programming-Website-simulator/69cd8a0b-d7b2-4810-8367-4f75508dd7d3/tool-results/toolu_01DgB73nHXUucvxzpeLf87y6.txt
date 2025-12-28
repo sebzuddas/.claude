@@ -1,0 +1,44 @@
+The file /Users/sebastianozuddas/Programming/Website/simulator/src/components/visualizations/VectorField.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:
+   734→      <div ref={canvasRef} />
+   735→
+   736→      {/* Controls */}
+   737→      <div className="mt-4 p-4 bg-gray-100 rounded-lg">
+   738→        {/* Display options */}
+   739→        <div className="flex items-center justify-center gap-4 mb-4 pb-3 border-b border-gray-300">
+   740→          <button
+   741→            onClick={() => setShowArrows(!showArrows)}
+   742→            className={`px-4 py-2 rounded transition-colors ${
+   743→              showArrows ? 'bg-blue-500 text-white' : 'bg-gray-300'
+   744→            }`}
+   745→          >
+   746→            {showArrows ? '✓ Arrows' : 'Arrows'}
+   747→          </button>
+   748→
+   749→          <button
+   750→            onClick={handleClearTrajectories}
+   751→            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+   752→            disabled={trajectories.length === 0}
+   753→          >
+   754→            Clear Trajectories ({trajectories.length}/2)
+   755→          </button>
+   756→
+   757→          <div className="flex items-center gap-2">
+   758→            <label className="text-sm font-medium">
+   759→              Sim Time: {simulationTime}s
+   760→            </label>
+   761→            <input
+   762→              type="range"
+   763→              min="5"
+   764→              max="60"
+   765→              step="5"
+   766→              value={simulationTime}
+   767→              onChange={(e) => setSimulationTime(parseInt(e.target.value))}
+   768→              className="w-32"
+   769→              title="Simulation time (5-60 seconds)"
+   770→            />
+   771→          </div>
+   772→        </div>
+   773→
+   774→        {/* Playback controls */}
+   775→        {trajectories.length > 0 && (
+   776→          <>
