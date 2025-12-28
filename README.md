@@ -4,12 +4,18 @@ This repo sets up my claude agents in a given way...
 
 
 #TODO:
-1. implement engineering standards in `CLAUDE.md`
+1. Implement engineering standards in `CLAUDE.md`
+2. Create something to track key learnings to track mistakes - held on the User level. 
+
 
 # NOTES:
 - Frontier thinking LLMs can handle approx 150-200 instructions consistently. Programming LLMs already contain 50 instructions, hence agents must have a maximum of 100 instructions. 
 - Context tradeoffs:
   - Sub-agents contain only the context they are given. They miss out on the larger-order thinking and holistic approaches. 
+
+# Usage approach
+- Each project initialises a BACKLOG.md. This backlog is where I set requirements, detail features, and outline changes. This is referenced by the orchestrator (in the terminal) who assigns various work to the specialised agents in question. 
+- States are tracked in STATE.md, ensuring that whenever compacting happens, information is still held in the state. The goal is to ensure better continuity between compactings. 
 
 
 # Conventions:

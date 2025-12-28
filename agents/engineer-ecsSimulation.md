@@ -1,6 +1,6 @@
 ---
 name: engineer-ecsSimulation
-description: Use for implementing simulation logic, ECS systems, and domain algorithms. Focuses on correctness over style.
+description: Use for implementing simulation logic of ECS systems, and domain algorithms. Focuses on correctness over style.
 tools: Read, Write, Edit, Bash, Glob, Grep
 model: sonnet
 color: cyan
