@@ -1,5 +1,0 @@
-56:export type ComponentData = Record<string, unknown>
-65:  components: Record<ComponentType, ComponentData>
-389:  getComponent<T = ComponentData>(type: ComponentType): T | undefined
-390:  setComponent(type: ComponentType, data: ComponentData): void
-393:  getAllComponents(): Map<ComponentType, ComponentData>

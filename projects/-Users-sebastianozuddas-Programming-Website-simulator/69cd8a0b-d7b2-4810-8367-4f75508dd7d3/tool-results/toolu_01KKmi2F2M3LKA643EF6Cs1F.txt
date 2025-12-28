@@ -1,5 +1,0 @@
-Found 4 files
-src/app/abm/page.tsx
-src/app/page.tsx
-src/app/statespace/page.tsx
-src/app/systemmodel/page.tsx

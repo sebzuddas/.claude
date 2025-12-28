@@ -1,7 +1,0 @@
-<tool_use_error>String to replace not found in file.
-String:   const [currentTimeIndex, setCurrentTimeIndex] = useState(0)
-  const currentTimeIndexRef = useRef(0)
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [showArrows, setShowArrows] = useState(true)
-  const [trajectories, setTrajectories] = useState<VectorFieldTrajectory[]>([])
-  const bounds = useRef(calculateBounds(data))</tool_use_error>

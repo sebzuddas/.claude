@@ -1,5 +1,0 @@
-2025-12-20T17:18:28.607Z [DEBUG] [SLOW OPERATION DETECTED] execSyncWithDefaults_DEPRECATED (19.9ms): security find-generic-password -a "sebastianozuddas" -w -s "Claude Code-credentials"
-2025-12-20T17:18:40.313Z [DEBUG] [SLOW OPERATION DETECTED] execSyncWithDefaults_DEPRECATED (36.0ms): security find-generic-password -a "sebastianozuddas" -w -s "Claude Code-credentials"
-2025-12-20T17:18:40.354Z [DEBUG] [SLOW OPERATION DETECTED] execSyncWithDefaults_DEPRECATED (41.1ms): security find-generic-password -a "sebastianozuddas" -w -s "Claude Code-credentials"
-2025-12-20T17:18:40.451Z [DEBUG] [SLOW OPERATION DETECTED] execSyncWithDefaults_DEPRECATED (27.4ms): security find-generic-password -a "sebastianozuddas" -w -s "Claude Code-credentials"
-2025-12-20T17:19:16.235Z [DEBUG] [SLOW OPERATION DETECTED] execSyncWithDefaults_DEPRECATED (25.8ms): security find-generic-password -a "sebastianozuddas" -w -s "Claude Code-credentials"

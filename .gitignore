@@ -1,3 +1,7 @@
 plugins/marketplaces/claude-plugins-official
 debug/*
 projects/*
+shell-snapshots/*
+statsig/*
+todos/*
+file-history/*

@@ -1,5 +1,0 @@
-232-- Better UX - users see what's available
-233-
-234:#### StateSpaceVisualization Component (`/src/components/visualizations/StateSpaceVisualization.tsx`)
-235-
-236-**Purpose**: Displays phase portraits (state vs state plots) from time series data.

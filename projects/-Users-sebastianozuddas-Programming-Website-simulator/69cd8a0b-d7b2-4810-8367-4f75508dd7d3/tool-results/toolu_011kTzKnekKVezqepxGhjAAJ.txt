@@ -1,1 +1,0 @@
-The file /Users/sebastianozuddas/Programming/Website/simulator/src/app/abm/page.tsx has been updated. All occurrences of 'max-w-4xl' were successfully replaced with 'max-w-6xl'.

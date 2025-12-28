@@ -1,2 +1,0 @@
-<tool_use_error>InputValidationError: Grep failed due to the following issue:
-The parameter `-n` type is expected as `boolean` but provided as `string`</tool_use_error>
