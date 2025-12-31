@@ -5,9 +5,10 @@ Initialize project documentation structure for: $ARGUMENTS
 1. Create directory structure:
 ```bash
    mkdir -p docs/plans
+   mkdir -p docs/architectures
 ```
 
-2. Create `docs/STATE.md`:
+1. Create `docs/STATE.md`:
 ```markdown
    # State
 
@@ -30,7 +31,7 @@ Initialize project documentation structure for: $ARGUMENTS
    → docs/OPEN_QUESTIONS.md
 ```
 
-3. Create `docs/BACKLOG.md`:
+1. Create `docs/BACKLOG.md`:
 ```markdown
    # Backlog
 
@@ -56,7 +57,7 @@ Initialize project documentation structure for: $ARGUMENTS
    ---
 ```
 
-4. Create `docs/DECISIONS.md`:
+1. Create `docs/DECISIONS.md`:
 ```markdown
    # Decisions
 
@@ -65,7 +66,7 @@ Initialize project documentation structure for: $ARGUMENTS
    ---
 ```
 
-5. Create `docs/OPEN_QUESTIONS.md`:
+1. Create `docs/OPEN_QUESTIONS.md`:
 ```markdown
    # Open Questions
 
@@ -74,7 +75,10 @@ Initialize project documentation structure for: $ARGUMENTS
    ---
 ```
 
-6. Report what was created.
+1. Create `docs/OPERATIONS.md`:
+
+
+2. Report what was created.
 
 
 If $ARGUMENTS is empty, prompt: "What's the project focus?"
