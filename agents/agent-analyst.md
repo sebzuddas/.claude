@@ -2,7 +2,7 @@
 name: agent-analyst
 description: Use for evaluating options, making comparisons, and supporting decisions. Synthesizes information into assessments.
 tools: Read, Grep, Glob, WebFetch, WebSearch
-model: opus
+model: sonnet 
 color: blue
 ---
 

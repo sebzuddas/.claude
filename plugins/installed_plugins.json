@@ -1,0 +1,49 @@
+{
+  "version": 2,
+  "plugins": {
+    "claude-mem@thedotmack": [
+      {
+        "scope": "user",
+        "installPath": "/Users/sebastianozuddas/.claude/plugins/cache/thedotmack/claude-mem/9.0.0",
+        "version": "9.0.0",
+        "installedAt": "2026-01-06T13:07:23.929Z",
+        "lastUpdated": "2026-01-06T13:07:23.929Z",
+        "gitCommitSha": "1fe93919b9b961fed594f3f520e04a9e2a5eded9",
+        "isLocal": true
+      }
+    ],
+    "frontend-design@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/Users/sebastianozuddas/.claude/plugins/cache/claude-plugins-official/frontend-design/dbc4a7733cd4",
+        "version": "dbc4a7733cd4",
+        "installedAt": "2026-01-06T13:08:07.011Z",
+        "lastUpdated": "2026-01-06T13:10:28.549Z",
+        "gitCommitSha": "1fe93919b9b961fed594f3f520e04a9e2a5eded9",
+        "isLocal": true
+      }
+    ],
+    "greptile@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/Users/sebastianozuddas/.claude/plugins/cache/claude-plugins-official/greptile/dbc4a7733cd4",
+        "version": "dbc4a7733cd4",
+        "installedAt": "2026-01-06T13:09:07.046Z",
+        "lastUpdated": "2026-01-06T13:10:28.555Z",
+        "gitCommitSha": "1fe93919b9b961fed594f3f520e04a9e2a5eded9",
+        "isLocal": true
+      }
+    ],
+    "asana@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/Users/sebastianozuddas/.claude/plugins/cache/claude-plugins-official/asana/dbc4a7733cd4",
+        "version": "dbc4a7733cd4",
+        "installedAt": "2026-01-06T13:10:22.493Z",
+        "lastUpdated": "2026-01-06T13:10:28.565Z",
+        "gitCommitSha": "1fe93919b9b961fed594f3f520e04a9e2a5eded9",
+        "isLocal": true
+      }
+    ]
+  }
+}

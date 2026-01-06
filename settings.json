@@ -1,3 +1,9 @@
 {
-  "model": "sonnet"
+  "model": "sonnet",
+  "enabledPlugins": {
+    "claude-mem@thedotmack": true,
+    "frontend-design@claude-plugins-official": true,
+    "greptile@claude-plugins-official": true,
+    "asana@claude-plugins-official": true
+  }
 }
