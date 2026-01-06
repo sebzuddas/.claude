@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "lastComputedDate": "2025-12-27",
+  "lastComputedDate": "2026-01-01",
   "dailyActivity": [
     {
       "date": "2025-12-20",
@@ -19,6 +19,12 @@
       "messageCount": 1685,
       "sessionCount": 1,
       "toolCallCount": 438
+    },
+    {
+      "date": "2025-12-28",
+      "messageCount": 550,
+      "sessionCount": 4,
+      "toolCallCount": 154
     }
   ],
   "dailyModelTokens": [
@@ -41,14 +47,21 @@
         "claude-sonnet-4-5-20250929": 164156,
         "claude-opus-4-5-20251101": 131606
       }
+    },
+    {
+      "date": "2025-12-28",
+      "tokensByModel": {
+        "claude-opus-4-5-20251101": 59567,
+        "claude-sonnet-4-5-20250929": 18495
+      }
     }
   ],
   "modelUsage": {
     "claude-sonnet-4-5-20250929": {
-      "inputTokens": 8176,
-      "outputTokens": 277282,
-      "cacheReadInputTokens": 82895685,
-      "cacheCreationInputTokens": 8806695,
+      "inputTokens": 8818,
+      "outputTokens": 295135,
+      "cacheReadInputTokens": 87194001,
+      "cacheCreationInputTokens": 9657815,
       "webSearchRequests": 0,
       "costUSD": 0,
       "contextWindow": 0
@@ -63,28 +76,30 @@
       "contextWindow": 0
     },
     "claude-opus-4-5-20251101": {
-      "inputTokens": 4142,
-      "outputTokens": 127464,
-      "cacheReadInputTokens": 51690818,
-      "cacheCreationInputTokens": 3940405,
+      "inputTokens": 22772,
+      "outputTokens": 168401,
+      "cacheReadInputTokens": 77987122,
+      "cacheCreationInputTokens": 7318993,
       "webSearchRequests": 0,
       "costUSD": 0,
       "contextWindow": 0
     }
   },
-  "totalSessions": 5,
-  "totalMessages": 2662,
+  "totalSessions": 9,
+  "totalMessages": 3212,
   "longestSession": {
-    "sessionId": "69cd8a0b-d7b2-4810-8367-4f75508dd7d3",
-    "duration": 177270525,
-    "messageCount": 1685,
-    "timestamp": "2025-12-26T09:33:28.271Z"
+    "sessionId": "695f4427-b659-4071-80a3-6672a3e37bc1",
+    "duration": 252020997,
+    "messageCount": 529,
+    "timestamp": "2025-12-28T14:27:57.990Z"
   },
   "firstSessionDate": "2025-12-20T17:19:55.548Z",
   "hourCounts": {
     "8": 1,
     "9": 2,
     "10": 1,
+    "13": 3,
+    "14": 1,
     "17": 1
   }
 }
