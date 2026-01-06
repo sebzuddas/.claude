@@ -88,12 +88,12 @@ If $ARGUMENTS is empty, prompt: "What's the project focus?"
 
 **Usage:**
 ```
-> /init-state Spatial indexing for ABM framework
+> /init-state <project_name>
 ```
 
 Creates:
 ```
 docs/
-├── STATE.md           # Focus set to "Spatial indexing for ABM framework"
+├── STATE.md
 ├── DECISIONS.md
 └── OPEN_QUESTIONS.md
